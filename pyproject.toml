@@ -1,0 +1,4 @@
+[tool.poetry]
+name = "kebajikan-bot"
+version = "1.0.0"
+description = "Telegram Bot Kebajikan Harian - Seed System"
