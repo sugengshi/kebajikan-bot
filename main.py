@@ -130,8 +130,6 @@ def main():
 
     # Callbacks
     app.add_handler(CallbackQueryHandler(callback_pagi_ganti, pattern="^pagi_ganti_"))
-    app.add_handler(CallbackQueryHandler(konfirmasi_laporan_cb, pattern="^konfirmasi_laporan"))
-    app.add_handler(CallbackQueryHandler(koreksi_laporan_cb, pattern="^koreksi_laporan"))
 
     logger.info("Bot berjalan...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
