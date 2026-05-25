@@ -25,6 +25,23 @@ async def post_init(application):
     """Initialize DB and scheduler after bot starts."""
     await init_db()
     init_scheduler(application.bot)
+
+    # Register commands so they appear when user types "/"
+    from telegram import BotCommand
+    commands = [
+        BotCommand("start",     "Mulai ulang / Restart"),
+        BotCommand("help",      "Daftar perintah / Command list"),
+        BotCommand("kebajikan", "Fokus kebajikan hari ini / Today's virtue focus"),
+        BotCommand("refleksi",  "Isi refleksi / Fill reflection"),
+        BotCommand("ganti",     "Ganti fokus kebajikan / Change virtue focus"),
+        BotCommand("tambahan",  "Tambah perbuatan baik / Add good deeds"),
+        BotCommand("laporan",   "Ringkasan hari ini / Today's summary"),
+        BotCommand("level",     "Ubah level praktik / Change practice level"),
+        BotCommand("language",  "Ganti bahasa / Change language"),
+        BotCommand("setjam",    "Atur jam notifikasi / Set notification times"),
+    ]
+    await application.bot.set_my_commands(commands)
+    logger.info("Bot commands registered.")
     logger.info("Bot initialized successfully.")
 
 
@@ -72,7 +89,7 @@ def main():
 
     # Standalone commands
     app.add_handler(CommandHandler("kebajikan", cmd_kebajikan))
-    app.add_handler(CommandHandler("bantuan", cmd_bantuan))
+    app.add_handler(CommandHandler("help", cmd_bantuan))
     app.add_handler(CommandHandler("laporan", cmd_laporan))
     app.add_handler(CommandHandler("atur_jam", cmd_atur_jam))
     app.add_handler(CommandHandler("setjam", cmd_setjam))

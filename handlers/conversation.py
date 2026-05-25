@@ -153,16 +153,11 @@ def kb_vow_awal_konfirmasi(lang: str = "id"):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     await create_user(user.id, user.username or user.first_name)
-    db_user = await get_user(user.id)
 
-    if db_user and db_user.get("onboarding_selesai"):
-        lang = db_user.get("bahasa", "id")
-        context.user_data["lang"] = lang
-        await update.message.reply_text(
-            format_sambutan_kembali(user.first_name, lang),
-            parse_mode="Markdown"
-        )
-        return ConversationHandler.END
+    # Always reset — clear onboarding and user data
+    context.user_data.clear()
+    await update_user(user.id, onboarding_selesai=0, level="pemula",
+                      kebajikan_fokus="[]", tujuan_smart="", join_date=None)
 
     await update.message.reply_text(
         T("pilih_bahasa", "id"),
