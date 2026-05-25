@@ -648,8 +648,7 @@ def sa_vow_to_day(vow_num: int) -> int:
 
 def day_to_start_date(day_number: int) -> str:
     """Back-calculate the join_date so that today = day_number.
-    Returns ISO date string."""
+    Returns a datetime.date object."""
     from datetime import date, timedelta
     today = date.today()
-    join_date = today - timedelta(days=day_number - 1)
-    return join_date.isoformat()
+    return today - timedelta(days=day_number - 1)

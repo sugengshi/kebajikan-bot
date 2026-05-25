@@ -709,7 +709,7 @@ async def _apply_level_upgrade(source, context, target, join_date=None):
     update_kwargs = {"level": target}
 
     if target in ("advanced", "super_advanced"):
-        update_kwargs["join_date"] = join_date if join_date else date.today().isoformat()
+        update_kwargs["join_date"] = join_date if join_date else date.today()
         update_kwargs["kebajikan_fokus"] = list(range(1, 11))
 
     # If coming from onboarding (not /level), mark as complete
