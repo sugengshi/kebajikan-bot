@@ -218,14 +218,29 @@ async def pilih_level_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     level = query.data.replace("level_", "")
     context.user_data["level"] = level
+    context.user_data["upgrade_target"] = level  # needed for vow flow
     lang = await _lang(query.from_user.id, context)
     cfg = LEVEL_CONFIG.get(level, {})
-    label = T(f"level_{level}_label", lang) if f"level_{level}_label" in __import__("utils.i18n", fromlist=["STRINGS"]).STRINGS else cfg.get("label", level)
+
+    label_key = f"level_{level}_label"
+    from utils.i18n import STRINGS
+    label = T(label_key, lang) if label_key in STRINGS else cfg.get("label", level)
 
     await query.edit_message_text(
         T("level_dipilih", lang, label=label, desc=cfg.get("deskripsi", "")),
         parse_mode="Markdown"
     )
+
+    # Advanced / Super Advanced: skip SMART goal, go to password
+    if level in ("advanced", "super_advanced"):
+        label_key2 = "level_advanced_label" if level == "advanced" else "level_super_label"
+        await query.message.reply_text(
+            T("password_prompt", lang, label=T(label_key2, lang)),
+            parse_mode="Markdown"
+        )
+        return UPGRADE_PASSWORD
+
+    # Standard levels: proceed with SMART goal
     await query.message.reply_text(format_tujuan_smart(lang), parse_mode="Markdown")
     return ONBOARDING_GOAL
 
@@ -677,6 +692,13 @@ async def konfirmasi_vow_awal_cb(update: Update, context: ContextTypes.DEFAULT_T
 
     join_date = context.user_data.get("upgrade_join_date")
     target = context.user_data.get("upgrade_target")
+    logger.info(f"konfirmasi_vow_awal_cb: target={target!r} join_date={join_date!r}")
+    if not target:
+        await query.message.reply_text(
+            "⚠️ Sesi tidak ditemukan. Gunakan /start atau /level untuk memulai ulang." if lang == "id"
+            else "⚠️ Session not found. Use /start or /level to start over."
+        )
+        return ConversationHandler.END
     await _apply_level_upgrade(query, context, target, join_date=join_date)
     return ConversationHandler.END
 
@@ -689,6 +711,11 @@ async def _apply_level_upgrade(source, context, target, join_date=None):
     if target in ("advanced", "super_advanced"):
         update_kwargs["join_date"] = join_date if join_date else date.today().isoformat()
         update_kwargs["kebajikan_fokus"] = list(range(1, 11))
+
+    # If coming from onboarding (not /level), mark as complete
+    db_user = await get_user(user_id)
+    if db_user and not db_user.get("onboarding_selesai"):
+        update_kwargs["onboarding_selesai"] = 1
 
     await update_user(user_id, **update_kwargs)
 
@@ -708,10 +735,14 @@ async def _apply_level_upgrade(source, context, target, join_date=None):
     else:
         text = T("upgrade_berhasil_standar", lang, label=label)
 
-    if hasattr(source, "edit_message_text"):
-        await source.edit_message_text(text, parse_mode="Markdown")
-    else:
-        await source.reply_text(text, parse_mode="Markdown")
+    try:
+        if hasattr(source, "edit_message_text"):
+            await source.edit_message_text(text, parse_mode="Markdown")
+        else:
+            await source.reply_text(text, parse_mode="Markdown")
+    except Exception:
+        # Fallback: always reply to the message
+        await source.message.reply_text(text, parse_mode="Markdown")
 
     context.user_data.clear()
 
