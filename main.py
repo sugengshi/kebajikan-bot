@@ -9,7 +9,8 @@ from telegram.ext import (
 from utils.database import init_db, get_user, update_user
 from handlers.conversation import (
     build_conversation_handler, cmd_kebajikan,
-    cmd_bantuan, cmd_laporan
+    cmd_bantuan, cmd_laporan, cmd_level, cmd_language,
+    callback_pagi_ganti, cmd_atur_jam, cmd_setjam
 )
 from handlers.scheduler import init_scheduler
 
@@ -51,59 +52,7 @@ async def callback_pagi_ganti(update, context):
         await query.edit_message_text("\n".join(lines), parse_mode="Markdown")
 
 
-async def atur_jam(update, context):
-    """Simple jam customization guide."""
-    await update.message.reply_text(
-        "⏰ *Atur Jam Notifikasi*\n\n"
-        "Kirim pesan dalam format berikut untuk mengubah jam notifikasi:\n\n"
-        "`/setjam pagi 07:30`\n"
-        "`/setjam siang 13:00`\n"
-        "`/setjam sore 17:00`\n"
-        "`/setjam malam 19:30`\n"
-        "`/setjam cofmed 22:00`\n\n"
-        "Semua waktu dalam WIB (UTC+7).",
-        parse_mode="Markdown"
-    )
-
-
-async def setjam(update, context):
-    """Handle /setjam sesi HH:MM."""
-    args = context.args
-    if len(args) != 2:
-        await update.message.reply_text(
-            "Format: `/setjam pagi 07:30`", parse_mode="Markdown"
-        )
-        return
-
-    sesi_map = {
-        "pagi": "jam_pagi",
-        "siang": "jam_siang",
-        "sore": "jam_sore",
-        "malam": "jam_malam",
-        "cofmed": "jam_cofmed",
-    }
-    sesi = args[0].lower()
-    jam = args[1]
-
-    if sesi not in sesi_map:
-        await update.message.reply_text(
-            f"Sesi tidak dikenal: {sesi}\nPilihan: pagi, siang, sore, malam, cofmed"
-        )
-        return
-
-    # Validasi format jam
-    try:
-        h, m = jam.split(":")
-        assert 0 <= int(h) <= 23 and 0 <= int(m) <= 59
-    except Exception:
-        await update.message.reply_text("Format jam tidak valid. Gunakan HH:MM, contoh: 07:30")
-        return
-
-    user_id = update.effective_user.id
-    await update_user(user_id, **{sesi_map[sesi]: jam})
-    await update.message.reply_text(
-        f"✅ Jam {sesi} berhasil diubah ke *{jam}* WIB.", parse_mode="Markdown"
-    )
+# atur_jam and setjam are now in handlers/conversation.py
 
 
 def main():
@@ -125,8 +74,10 @@ def main():
     app.add_handler(CommandHandler("kebajikan", cmd_kebajikan))
     app.add_handler(CommandHandler("bantuan", cmd_bantuan))
     app.add_handler(CommandHandler("laporan", cmd_laporan))
-    app.add_handler(CommandHandler("atur_jam", atur_jam))
-    app.add_handler(CommandHandler("setjam", setjam))
+    app.add_handler(CommandHandler("atur_jam", cmd_atur_jam))
+    app.add_handler(CommandHandler("setjam", cmd_setjam))
+    app.add_handler(CommandHandler("level", cmd_level))
+    app.add_handler(CommandHandler("language", cmd_language))
 
     # Callbacks
     app.add_handler(CallbackQueryHandler(callback_pagi_ganti, pattern="^pagi_ganti_"))

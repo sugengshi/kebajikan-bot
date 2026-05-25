@@ -43,6 +43,8 @@ async def init_db():
                 jam_cofmed  TEXT DEFAULT '21:30',
                 rotasi_index    INTEGER DEFAULT 0,
                 onboarding_selesai INTEGER DEFAULT 0,
+                bahasa      TEXT DEFAULT 'id',
+                join_date   DATE,
                 created_at  TIMESTAMPTZ DEFAULT NOW()
             )
         """)
@@ -257,3 +259,11 @@ async def clear_pending(user_id: int):
 # ─── COMPAT ALIAS ────────────────────────────────────────────────────────────
 async def get_today_str() -> str:
     return _today()
+
+
+async def get_user_lang(user_id: int) -> str:
+    """Return user's language preference: 'id' or 'en'. Defaults to 'id'."""
+    user = await get_user(user_id)
+    if not user:
+        return "id"
+    return user.get("bahasa", "id") or "id"

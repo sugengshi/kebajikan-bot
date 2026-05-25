@@ -1,195 +1,113 @@
 # utils/messages.py
-from data.kebajikan import KEBAJIKAN, get_kebajikan_by_id
+# All message formatting now uses i18n.T() for bilingual output.
+
 from datetime import datetime
 import pytz
+from utils.i18n import T
+from data.kebajikan import KEBAJIKAN, get_kebajikan_by_id
 
 WIB = pytz.timezone("Asia/Jakarta")
 
-SESI_LABEL = {
-    "pagi": "🌅 Pagi (07:00)",
-    "siang": "☀️ Siang (12:00)",
-    "sore": "🌇 Sore (18:00)",
+SESI_KEY = {
+    "pagi":  "sesi_pagi_label",
+    "siang": "sesi_siang_label",
+    "sore":  "sesi_sore_label",
 }
 
 
-def format_sambutan():
-    return (
-        "🙏 *Selamat datang di Bot Kebajikan Harian*\n\n"
-        "Bot ini akan memandu Anda memantau dan mengembangkan kebajikan "
-        "setiap hari — berdasarkan *10 Bibit Baik Utama* dari kebijaksanaan Tibet kuno.\n\n"
-        "Mari kita mulai dengan mengenal diri Anda lebih baik.\n\n"
-        "_Pertama, pilih level praktik Anda:_"
-    )
+def _sesi_label(sesi: str, lang: str) -> str:
+    return T(SESI_KEY.get(sesi, "sesi_pagi_label"), lang)
 
 
-def format_pilih_level():
-    return (
-        "📊 *Pilih Level Praktik Anda:*\n\n"
-        "🌱 *Pemula*\n"
-        "Fokus pada 1 kebajikan per hari hingga Anda siap berganti.\n\n"
-        "🌿 *Praktisi Menengah*\n"
-        "Fokus pada 3 kebajikan per hari secara bersamaan.\n\n"
-        "🌳 *Praktisi Mahir*\n"
-        "Memantau semua 10 kebajikan dengan sistem rotasi harian.\n\n"
-        "_Pilih yang terasa paling sesuai dengan kondisi Anda saat ini:_"
-    )
+def format_sambutan(lang: str = "id") -> str:
+    return T("sambutan", lang)
 
 
-def format_onboarding_tujuan():
-    return (
-        "🎯 *Langkah 1 dari 4 — Tujuan SMART Anda*\n\n"
-        "Tuliskan tujuan yang ingin Anda capai melalui praktik kebajikan ini.\n\n"
-        "Pastikan tujuan Anda *SMART:*\n"
-        "• *S*pesifik — jelas dan konkret\n"
-        "• *M*easurable — bisa diukur\n"
-        "• *A*chievable — bisa dicapai\n"
-        "• *R*elevant — sesuai dengan nilai Anda\n"
-        "• *T*ime-bound — ada batas waktunya\n\n"
-        "_Contoh: Dalam 30 hari ke depan, saya ingin lebih sabar dalam berbicara dengan keluarga saya._\n\n"
-        "✏️ *Tuliskan tujuan SMART Anda:*"
-    )
+def format_sambutan_kembali(name: str, lang: str = "id") -> str:
+    return T("sambutan_kembali", lang, name=name)
 
 
-def format_onboarding_siapa():
-    return (
-        "👥 *Langkah 2 dari 4 — Siapa yang Akan Anda Bantu?*\n\n"
-        "Kebajikan yang kita tanam selalu terhubung dengan orang-orang di sekitar kita.\n\n"
-        "Pikirkan: siapa yang paling akan merasakan manfaat dari perubahan Anda?\n\n"
-        "_Contoh: Keluarga saya di rumah, terutama anak-anak saya. Juga rekan kerja yang sering berinteraksi dengan saya._\n\n"
-        "✏️ *Tuliskan siapa yang ingin Anda bantu:*"
-    )
+def format_pilih_level(lang: str = "id") -> str:
+    return T("pilih_level", lang)
 
 
-def format_onboarding_pelaksanaan():
-    return (
-        "📋 *Langkah 3 dari 4 — Rencana Pelaksanaan*\n\n"
-        "Bagaimana Anda berencana menjalani praktik ini setiap hari?\n\n"
-        "_Contoh: Saya akan mengisi refleksi pagi, siang, dan sore dengan jujur. "
-        "Saya berkomitmen untuk tidak melewatkan satu pun sesi selama 30 hari._\n\n"
-        "✏️ *Tuliskan rencana pelaksanaan Anda:*"
-    )
+def format_tujuan_smart(lang: str = "id") -> str:
+    return T("tujuan_smart_prompt", lang)
 
 
-def format_onboarding_cofmed():
-    return (
-        "☕ *Langkah 4 dari 4 — Coffee Meditation (CofMed)*\n\n"
-        "Setiap malam pukul 21:30, bot akan mengirimkan *rangkuman semua hal positif* "
-        "yang sudah Anda catat sepanjang hari.\n\n"
-        "Ini adalah momen untuk duduk tenang, membaca ulang semua kebaikan yang sudah "
-        "Anda lakukan — dan membiarkan bibit-bibit itu meresap.\n\n"
-        "Tidak ada yang perlu dijawab. Cukup baca dan rasakan. 🙏\n\n"
-        "─────────────────────\n"
-        "Sekarang mari pilih kebajikan fokus Anda untuk mulai!\n\n"
-        "Ketuk tombol di bawah untuk melanjutkan:"
-    )
+def format_smart_revisi(lang: str = "id") -> str:
+    return T("smart_revisi_prompt", lang)
 
 
-def format_daftar_kebajikan(untuk_pilih: bool = False):
-    lines = ["📿 *10 Kebajikan Utama:*\n"]
-    current_group = ""
-    for k_id, data in KEBAJIKAN.items():
-        if data["kelompok"] != current_group:
-            current_group = data["kelompok"]
-            lines.append(f"\n*{current_group}*")
-        lines.append(f"{data['emoji']} {k_id}. {data['nama']}")
-    if untuk_pilih:
-        lines.append("\n\n_Ketuk nomor kebajikan yang ingin Anda pilih:_")
-    return "\n".join(lines)
+def format_rekomendasi(level: str, alasan_id: str, alasan_en: str, lang: str = "id") -> str:
+    level_key = f"rekomendasi_level_{level}" if level in ("pemula","menengah","mahir") else "rekomendasi_level_pemula"
+    level_text = T(level_key, lang)
+    alasan = alasan_id if lang == "id" else alasan_en
+    return T("rekomendasi_intro", lang, level_text=level_text, alasan=alasan)
 
 
-def format_kebajikan_detail(k_id: int):
-    k = get_kebajikan_by_id(k_id)
-    if not k:
-        return "Kebajikan tidak ditemukan."
-    positif = "\n".join(f"  ✅ {c}" for c in k["contoh_positif"][:4])
-    negatif = "\n".join(f"  ⚠️ {c}" for c in k["contoh_negatif"][:4])
-    return (
-        f"{k['emoji']} *{k['nama']}*\n"
-        f"_{k['kelompok']}_\n\n"
-        f"{k['deskripsi']}\n\n"
-        f"*Contoh positif:*\n{positif}\n\n"
-        f"*Contoh negatif:*\n{negatif}"
-    )
+def format_onboarding_selesai(name: str, fokus: list, lang: str = "id") -> str:
+    lines = []
+    for i, k_id in enumerate(fokus):
+        k = KEBAJIKAN.get(k_id, {})
+        if k:
+            nama = k["nama"] if lang == "id" else k.get("nama_en", k["nama"])
+            lines.append(f"{k['emoji']} {nama}")
+    daftar = "\n".join(lines)
+    return T("onboarding_selesai", lang, name=name, daftar=daftar)
 
 
-def format_pertanyaan_pagi_ganti():
-    return (
-        "🌅 *Selamat pagi!*\n\n"
-        "Hari baru telah tiba. Apakah Anda ingin *mengganti fokus kebajikan* hari ini, "
-        "atau melanjutkan dengan yang sama?"
-    )
+def format_pagi_ganti_tanya(fokus: list, lang: str = "id") -> str:
+    lines = []
+    for k_id in fokus:
+        k = KEBAJIKAN.get(k_id, {})
+        if k:
+            nama = k["nama"] if lang == "id" else k.get("nama_en", k["nama"])
+            lines.append(f"{k['emoji']} {nama}")
+    daftar = "\n".join(lines)
+    return T("pagi_ganti_tanya", lang, daftar=daftar)
 
 
-def format_pertanyaan_refleksi(sesi: str, k_id: int, step: str):
+def format_pagi_lanjut_konfirmasi(fokus: list, lang: str = "id") -> str:
+    lines = []
+    for k_id in fokus:
+        k = KEBAJIKAN.get(k_id, {})
+        if k:
+            nama = k["nama"] if lang == "id" else k.get("nama_en", k["nama"])
+            lines.append(f"{k['emoji']} {nama}")
+    daftar = "\n".join(lines)
+    return T("pagi_lanjut_konfirmasi", lang, daftar=daftar)
+
+
+def format_pertanyaan_refleksi(sesi: str, k_id: int, step: str, lang: str = "id") -> str:
     k = get_kebajikan_by_id(k_id)
     if not k:
         return ""
-    label = SESI_LABEL.get(sesi, sesi)
-    header = f"{label}\n{k['emoji']} *{k['nama']}*\n\n"
-
-    if step == "positif":
-        return (
-            f"{header}"
-            "🔍 *Pertanyaan 1 dari 3*\n\n"
-            "Selama *24 jam terakhir*, dengan memperluas makna kebajikan ini ke semua yang "
-            "terhubung dengannya — perbuatan, perkataan, bahkan niat dalam pikiran Anda:\n\n"
-            f"_{k['pertanyaan_asosiasi']}_\n\n"
-            "✅ *Apa yang sudah Anda lakukan atau pikirkan yang SESUAI dengan kebajikan ini?*\n\n"
-            "_Tidak ada yang terlalu kecil untuk dicatat. Bahkan niat pun sudah menjadi bibit._"
-        )
-    elif step == "negatif":
-        return (
-            f"{header}"
-            "🔍 *Pertanyaan 2 dari 3*\n\n"
-            "⚠️ *Adakah perbuatan, perkataan, atau pikiran yang TIDAK SESUAI "
-            "dengan kebajikan ini selama 24 jam terakhir?*\n\n"
-            "_Jawab dengan jujur — ini bukan untuk dihakimi, tapi untuk disadari dan "
-            "diseimbangkan. Anda bisa menulis 'tidak ada' jika memang tidak ada._"
-        )
-    elif step == "rencana":
-        return (
-            f"{header}"
-            "🔍 *Pertanyaan 3 dari 3*\n\n"
-            "🌱 *Untuk menyeimbangkan bibit negatif di atas, apa rencana konkret yang "
-            "akan Anda lakukan dalam 24 jam ke depan?*\n\n"
-            "_Satu tindakan kecil pun sudah cukup. Yang penting nyata dan bisa dilakukan._"
-        )
-    return ""
+    sesi_label = _sesi_label(sesi, lang)
+    nama = k["nama"] if lang == "id" else k.get("nama_en", k["nama"])
+    pertanyaan = k["pertanyaan_asosiasi"] if lang == "id" else k.get("pertanyaan_asosiasi_en", k["pertanyaan_asosiasi"])
+    key = f"refleksi_{step}"
+    return T(key, lang,
+             sesi=sesi_label, emoji=k["emoji"],
+             nama=nama, nama_en=nama,
+             pertanyaan=pertanyaan)
 
 
-def format_konfirmasi_sesi(positif: str, negatif: str, rencana: str, k_id: int):
+def format_konfirmasi_sesi(positif: str, negatif: str, rencana: str, k_id: int, lang: str = "id") -> str:
     k = get_kebajikan_by_id(k_id)
     nama = k["nama"] if k else "Kebajikan"
-    return (
-        f"✨ *Catatan Anda untuk {nama}:*\n\n"
-        f"✅ *Positif:* {positif}\n\n"
-        f"⚠️ *Perlu diseimbangkan:* {negatif}\n\n"
-        f"🌱 *Rencana 24 jam ke depan:* {rencana}\n\n"
-        "Terima kasih sudah jujur dan teliti! Catatan ini tersimpan. 🙏"
-    )
+    if lang == "en" and k:
+        nama = k.get("nama_en", nama)
+    return T("refleksi_konfirmasi", lang, nama=nama, positif=positif, negatif=negatif, rencana=rencana)
 
 
-def format_pertanyaan_tambahan_malam():
-    return (
-        "🌙 *Laporan Malam*\n\n"
-        "Sebelum hari berakhir — adakah *perbuatan baik lainnya* yang sudah Anda lakukan "
-        "hari ini yang belum tercatat di laporan pagi, siang, atau sore?\n\n"
-        "Ceritakan di sini, seberapapun kecilnya. 🙏\n\n"
-        "_Ketuk 'Tidak ada' jika sudah lengkap._"
-    )
+def format_pertanyaan_tambahan_malam(lang: str = "id") -> str:
+    return T("tambahan_malam_prompt", lang)
 
 
-def format_ringkasan_positif(catatan_list: list, tambahan_list: list):
-    """
-    21:00 — Tampilkan semua perbuatan baik hari ini (hanya sisi positif).
-    Bukan konfirmasi, langsung tampil.
-    """
+def format_ringkasan_positif(catatan_list: list, tambahan_list: list, lang: str = "id") -> str:
     now = datetime.now(WIB).strftime("%d %B %Y")
-    lines = [
-        f"✨ *Perbuatan Baik Anda Hari Ini*",
-        f"_{now}_\n",
-        "─────────────────────\n",
-    ]
+    lines = [T("ringkasan_judul", lang, tanggal=now)]
 
     ada_isi = False
     for c in catatan_list:
@@ -199,56 +117,43 @@ def format_ringkasan_positif(catatan_list: list, tambahan_list: list):
         ada_isi = True
         k = get_kebajikan_by_id(c.get("kebajikan_id", 0))
         nama = k["nama"] if k else "Kebajikan"
+        if lang == "en" and k:
+            nama = k.get("nama_en", nama)
         emoji = k["emoji"] if k else "•"
-        sesi_label = SESI_LABEL.get(c["sesi"], c["sesi"])
+        sesi_label = _sesi_label(c["sesi"], lang)
         lines.append(f"*{sesi_label}* — {emoji} _{nama}_")
         lines.append(f"✅ {positif}\n")
 
     if tambahan_list:
         ada_isi = True
-        lines.append("🌙 *Tambahan Perbuatan Baik:*\n")
+        lines.append(T("tambahan_malam_label", lang))
         for t in tambahan_list:
             lines.append(f"✅ {t}\n")
 
     if not ada_isi:
-        lines.append(
-            "_Belum ada perbuatan baik yang tercatat hari ini.\n"
-            "Tidak apa-apa — setiap hari adalah kesempatan baru._ 🙏"
-        )
-    else:
-        lines.append("─────────────────────")
-        lines.append(
-            "_Bacalah perlahan. Rasakan setiap bibit yang sudah Anda tanam. "
-            "Arsip lengkap akan dikirim pukul 21:30._ 🙏"
-        )
+        return T("ringkasan_kosong", lang)
+
+    lines.append("─────────────────────")
+    lines.append(T("ringkasan_penutup", lang))
     return "\n".join(lines)
 
 
-def format_arsip_pribadi(catatan_list: list, tambahan_list: list, user_nama: str = ""):
-    """
-    21:30 — Arsip pribadi lengkap: semua entri refleksi pagi/siang/sore
-    + tambahan perbuatan baik. Mencakup positif, negatif, dan rencana.
-    """
+def format_arsip_pribadi(catatan_list: list, tambahan_list: list, lang: str = "id", user_nama: str = "") -> str:
     now = datetime.now(WIB).strftime("%d %B %Y")
     sapaan = f" — {user_nama}" if user_nama else ""
-    lines = [
-        f"📁 *Arsip Pribadi Harian{sapaan}*",
-        f"_{now}_\n",
-        "═════════════════════\n",
-    ]
 
     if not catatan_list and not tambahan_list:
-        lines.append(
-            "_Tidak ada entri untuk hari ini.\n"
-            "Mulai besok, setiap sesi yang terisi akan tersimpan di sini._ 🙏"
-        )
-        return "\n".join(lines)
+        return T("arsip_kosong", lang)
+
+    lines = [T("arsip_judul", lang, sapaan=sapaan, tanggal=now)]
 
     for c in catatan_list:
         k = get_kebajikan_by_id(c.get("kebajikan_id", 0))
         nama = k["nama"] if k else "Kebajikan"
+        if lang == "en" and k:
+            nama = k.get("nama_en", nama)
         emoji = k["emoji"] if k else "•"
-        sesi_label = SESI_LABEL.get(c["sesi"], c["sesi"])
+        sesi_label = _sesi_label(c["sesi"], lang)
 
         lines.append(f"*{sesi_label}*")
         lines.append(f"{emoji} *{nama}*\n")
@@ -258,49 +163,37 @@ def format_arsip_pribadi(catatan_list: list, tambahan_list: list, user_nama: str
         rencana = c.get("rencana_kedepan", "").strip()
 
         if positif:
-            lines.append(f"✅ *Sesuai kebajikan:*\n{positif}\n")
-        if negatif and negatif.lower() not in ("tidak ada", "-", ""):
-            lines.append(f"⚠️ *Perlu diseimbangkan:*\n{negatif}\n")
+            lines.append(T("arsip_positif_label", lang) + positif + "\n")
+        if negatif and negatif.lower() not in ("tidak ada", "none", "-", ""):
+            lines.append(T("arsip_negatif_label", lang) + negatif + "\n")
         if rencana:
-            lines.append(f"🌱 *Rencana 24 jam ke depan:*\n{rencana}\n")
-
+            lines.append(T("arsip_rencana_label", lang) + rencana + "\n")
         lines.append("─────────────────────\n")
 
     if tambahan_list:
-        lines.append("🌙 *Tambahan Perbuatan Baik (20:00)*\n")
+        lines.append(T("arsip_tambahan_label", lang))
         for t in tambahan_list:
             lines.append(f"✅ {t}\n")
         lines.append("─────────────────────\n")
 
-    lines.append(
-        "_Arsip ini adalah catatan integritas Anda. "
-        "Setiap bibit yang dicatat dengan jujur akan tumbuh. "
-        "Istirahatlah dengan tenang._ 🙏"
-    )
+    lines.append(T("arsip_penutup", lang))
     return "\n".join(lines)
 
 
-# Alias untuk backward compatibility
-def format_konfirmasi_laporan(catatan_list: list, tambahan_list: list):
-    return format_ringkasan_positif(catatan_list, tambahan_list)
-
-
-def format_cofmed(catatan_list: list, tambahan_list: list, user_nama: str = ""):
-    return format_arsip_pribadi(catatan_list, tambahan_list, user_nama)
-
-
-def format_pengingat(sesi: str, k_id: int, attempt: int = 1):
+def format_pengingat(sesi: str, k_id: int, lang: str = "id") -> str:
     k = get_kebajikan_by_id(k_id)
     nama = k["nama"] if k else "kebajikan"
+    if lang == "en" and k:
+        nama = k.get("nama_en", nama)
     emoji = k["emoji"] if k else "•"
-    if attempt == 1:
-        return (
-            f"⏰ *Pengingat {SESI_LABEL.get(sesi, sesi)}*\n\n"
-            f"Refleksi {emoji} *{nama}* Anda belum terisi.\n"
-            "Butuh hanya beberapa menit — yuk kita isi bersama! 🙏"
-        )
-    return (
-        f"🔔 *Pengingat ke-2*\n\n"
-        f"Refleksi {sesi} untuk {emoji} *{nama}* masih menunggu.\n"
-        "Ketuk /refleksi untuk mulai mengisi sekarang."
-    )
+    sesi_label = _sesi_label(sesi, lang)
+    return T("pengingat", lang, sesi=sesi_label, emoji=emoji, nama=nama)
+
+
+# Alias kept for backward compat
+def format_konfirmasi_laporan(catatan_list, tambahan_list, lang="id"):
+    return format_ringkasan_positif(catatan_list, tambahan_list, lang)
+
+
+def format_cofmed(catatan_list, tambahan_list, user_nama="", lang="id"):
+    return format_arsip_pribadi(catatan_list, tambahan_list, lang, user_nama)

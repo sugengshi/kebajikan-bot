@@ -9,12 +9,14 @@ from apscheduler.triggers.cron import CronTrigger
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from utils.database import (
     get_all_users, get_user, update_user, get_catatan_hari_ini,
-    get_tambahan_malam, set_pending, get_pending
+    get_tambahan_malam, set_pending, get_pending, get_user_lang
 )
 from utils.messages import (
     format_pertanyaan_refleksi, format_pertanyaan_tambahan_malam,
-    format_pengingat, format_ringkasan_positif, format_arsip_pribadi
+    format_pengingat, format_ringkasan_positif, format_arsip_pribadi,
+    format_pagi_ganti_tanya
 )
+from utils.i18n import T
 from data.kebajikan import KEBAJIKAN, LEVEL_CONFIG
 from data.vows import (
     ADVANCED_VOWS, SUPER_ADVANCED_VOWS,
@@ -163,15 +165,16 @@ async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict):
     slot_index = times.index(jam)
 
     # Get vow for this day and slot
+    lang = db_user.get("bahasa", "id") or "id"
     if level == "advanced":
         vows_today = get_adv_vows_for_day(day_number)
         vow = vows_today[slot_index]
-        label = "Sumpah Bodhisattva 🪷"
+        label = T("sumpah_label_advanced", lang)
         vow_dict = ADVANCED_VOWS
     else:
         vows_today = get_sa_vows_for_day(day_number)
         vow = vows_today[slot_index]
-        label = "Sumpah Tantra 💎"
+        label = T("sumpah_label_super", lang)
         vow_dict = SUPER_ADVANCED_VOWS
 
     # Format message — handle the 264&265 pair on SA day 44 last slot
@@ -193,22 +196,16 @@ async def _kirim_06(bot: Bot, user_id: int):
     fokus = db_user.get("kebajikan_fokus", [])
     if not fokus:
         return
-
-    lines = ["🌅 *Selamat pagi!*\n\nFokus kebajikan Anda saat ini:\n"]
-    for k_id in fokus:
-        k = KEBAJIKAN.get(k_id, {})
-        if k:
-            lines.append(f"{k['emoji']} {k['nama']}")
-    lines.append("\n\nApakah ingin *mengganti* fokus kebajikan hari ini?")
+    lang = db_user.get("bahasa", "id") or "id"
 
     await bot.send_message(
         chat_id=user_id,
-        text="\n".join(lines),
+        text=format_pagi_ganti_tanya(fokus, lang),
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("🔄 Ya, ganti", callback_data="pagi_ganti_ya"),
-                InlineKeyboardButton("✅ Lanjutkan", callback_data="pagi_ganti_tidak"),
+                InlineKeyboardButton(T("pagi_ganti_ya_label", lang),    callback_data="pagi_ganti_ya"),
+                InlineKeyboardButton(T("pagi_ganti_tidak_label", lang), callback_data="pagi_ganti_tidak"),
             ]
         ])
     )
@@ -233,45 +230,35 @@ async def kirim_sesi(bot: Bot, user_id: int, sesi: str):
         k_id = fokus[min(idx, len(fokus) - 1)]
 
     await set_pending(user_id, sesi, k_id)
+    lang = db_user.get("bahasa", "id") or "id"
     await bot.send_message(
         chat_id=user_id,
-        text=format_pertanyaan_refleksi(sesi, k_id, "positif"),
+        text=format_pertanyaan_refleksi(sesi, k_id, "positif", lang),
         parse_mode="Markdown"
     )
 
 
 async def kirim_malam(bot: Bot, user_id: int):
     """20:00 — tanya tambahan perbuatan baik."""
+    lang = await get_user_lang(user_id)
     await bot.send_message(
         chat_id=user_id,
-        text=format_pertanyaan_tambahan_malam(),
+        text=format_pertanyaan_tambahan_malam(lang),
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("✅ Tidak ada tambahan", callback_data="tidak_ada_tambahan")]
+            [InlineKeyboardButton(T("tambahan_tidak_ada_label", lang), callback_data="tidak_ada_tambahan")]
         ])
     )
 
 
 async def kirim_ringkasan(bot: Bot, user_id: int):
     """21:00 — tampilkan semua perbuatan baik hari ini (positif saja)."""
+    lang = await get_user_lang(user_id)
     catatan = await get_catatan_hari_ini(user_id)
     tambahan = await get_tambahan_malam(user_id)
-
-    if not catatan and not tambahan:
-        await bot.send_message(
-            chat_id=user_id,
-            text=(
-                "✨ *Perbuatan Baik Hari Ini*\n\n"
-                "Belum ada catatan yang masuk hari ini.\n"
-                "Tidak apa-apa — besok kita mulai lagi. 🙏"
-            ),
-            parse_mode="Markdown"
-        )
-        return
-
     await bot.send_message(
         chat_id=user_id,
-        text=format_ringkasan_positif(catatan, tambahan),
+        text=format_ringkasan_positif(catatan, tambahan, lang),
         parse_mode="Markdown"
     )
 
@@ -315,9 +302,10 @@ async def kirim_pengingat(bot: Bot):
         try:
             pending = await get_pending(user_id)
             if pending:
+                lang = await get_user_lang(user_id)
                 await bot.send_message(
                     chat_id=user_id,
-                    text=format_pengingat(pending["sesi"], pending["kebajikan_id"]),
+                    text=format_pengingat(pending["sesi"], pending["kebajikan_id"], lang),
                     parse_mode="Markdown"
                 )
         except Exception as e:
