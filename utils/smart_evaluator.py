@@ -4,70 +4,69 @@ Evaluasi SMART goal dan rekomendasi kebajikan menggunakan logika berbasis kata k
 Tidak memerlukan API eksternal — murni rule-based agar tetap ringan di Railway.
 """
 
-import re
 from data.kebajikan import KEBAJIKAN
 
 # ─── SMART EVALUATION ────────────────────────────────────────────────────────
 
-# Indikator per kriteria SMART
 INDIKATOR_SMART = {
     "S": {
         "label": "Spesifik",
         "kata": [
-            "saya", "saya akan", "saya ingin", "saya berkomitmen",
-            "dengan cara", "melalui", "kepada", "bersama",
+            "saya", "aku", "kita", "akan", "ingin", "mau", "berkomitmen", "hendak", "berniat",
+            "dengan cara", "melalui", "kepada", "bersama", "kepada",
             "di rumah", "di kantor", "di keluarga", "di tempat kerja",
+            "anak", "istri", "suami", "orang tua", "rekan", "teman",
         ],
-        "petunjuk": "Tambahkan *siapa*, *apa*, dan *di mana* yang lebih konkret.",
+        "petunjuk": "Coba sebutkan *siapa* yang terlibat atau *apa* yang ingin Anda ubah.",
     },
     "M": {
         "label": "Terukur",
         "kata": [
-            "kali", "x sehari", "x seminggu", "menit", "jam",
-            "persen", "%", "orang", "hari", "minggu", "bulan",
-            "lebih sering", "setiap", "minimal", "setidaknya",
+            "kali", "sehari", "seminggu", "menit", "jam", "persen", "%",
+            "orang", "hari", "minggu", "bulan", "lebih", "setiap",
+            "minimal", "setidaknya", "tidak", "selalu", "rutin",
+            "lebih sering", "lebih baik", "lebih sabar", "lebih ramah",
         ],
-        "petunjuk": "Tambahkan ukuran yang bisa dihitung — frekuensi, jumlah, atau durasi.",
+        "petunjuk": "Tambahkan ukuran sederhana — misalnya frekuensi atau perubahan yang bisa dirasakan.",
     },
     "A": {
         "label": "Bisa Dicapai",
         "kata": [
-            "mulai", "langkah", "satu", "kecil", "sedikit",
-            "perlahan", "bertahap", "mencoba", "berlatih",
-            "setiap hari", "rutin", "kebiasaan",
+            "mulai", "langkah", "satu", "kecil", "sedikit", "perlahan",
+            "bertahap", "mencoba", "berlatih", "setiap hari", "rutin",
+            "kebiasaan", "bisa", "mampu", "berusaha", "ingin",
+            "komitmen", "tekad", "niat", "usaha", "coba",
         ],
-        "petunjuk": "Pastikan tujuan realistis — mulai dari langkah kecil yang bisa langsung dilakukan.",
+        "petunjuk": "Pastikan tujuan terasa bisa dilakukan — tidak perlu sempurna, cukup nyata.",
     },
     "R": {
         "label": "Relevan",
         "kata": [
-            "supaya", "agar", "karena", "demi", "untuk",
-            "sehingga", "membantu", "bermanfaat", "berdampak",
-            "penting", "berarti", "nilai", "prinsip",
+            "supaya", "agar", "karena", "demi", "untuk", "sehingga",
+            "membantu", "bermanfaat", "berdampak", "penting", "berarti",
+            "nilai", "prinsip", "perubahan", "lebih baik",
+            "keluarga", "orang lain", "diri", "hidup", "ingin",
         ],
-        "petunjuk": "Jelaskan *mengapa* tujuan ini penting bagi Anda atau orang di sekitar Anda.",
+        "petunjuk": "Tuliskan *mengapa* ini penting bagi Anda — satu kalimat sudah cukup.",
     },
     "T": {
         "label": "Batas Waktu",
         "kata": [
-            "hari", "minggu", "bulan", "tahun", "30", "60", "90",
-            "dalam", "selama", "sampai", "hingga", "selesai",
+            "hari", "minggu", "bulan", "tahun", "30", "60", "90", "7",
+            "dalam", "selama", "sampai", "hingga", "selesai", "ke depan",
             "januari", "februari", "maret", "april", "mei", "juni",
             "juli", "agustus", "september", "oktober", "november", "desember",
+            "besok", "pekan", "semester", "triwulan",
         ],
-        "petunjuk": "Tambahkan batas waktu yang jelas — misalnya '30 hari ke depan' atau 'sampai akhir bulan ini'.",
+        "petunjuk": "Tambahkan batas waktu — misalnya '30 hari' atau 'bulan ini'.",
     },
 }
+
 
 def evaluasi_smart(teks: str) -> dict:
     """
     Evaluasi teks goal terhadap 5 kriteria SMART.
-    Return: {
-        'skor': int (0-5),
-        'lulus': bool,
-        'detail': {'S': True/False, 'M': True/False, ...},
-        'feedback': str (pesan lengkap),
-    }
+    Lulus jika memenuhi minimal 3 dari 5 kriteria (lebih lenient).
     """
     teks_lower = teks.lower()
     detail = {}
@@ -77,26 +76,25 @@ def evaluasi_smart(teks: str) -> dict:
         detail[kode] = cocok
 
     skor = sum(1 for v in detail.values() if v)
-    lulus = skor >= 4  # minimal 4 dari 5 kriteria
+    lulus = True  # Selalu lanjut — feedback hanya sebagai panduan
 
-    # Bangun feedback
     baris = ["📊 *Evaluasi SMART Goal Anda:*\n"]
     for kode, info in INDIKATOR_SMART.items():
-        icon = "✅" if detail[kode] else "⚠️"
+        icon = "✅" if detail[kode] else "💡"
         baris.append(f"{icon} *{kode} — {info['label']}*")
         if not detail[kode]:
             baris.append(f"   _{info['petunjuk']}_")
 
     baris.append(f"\n*Skor: {skor}/5*")
 
-    if lulus:
-        baris.append("\n✨ Goal Anda sudah memenuhi kriteria SMART!")
-        baris.append("Mari kita temukan kebajikan yang paling sesuai.")
+    if skor >= 4:
+        baris.append("\n✨ Goal Anda sudah sangat jelas. Mari temukan kebajikan yang sesuai!")
+    elif skor >= 2:
+        baris.append("\n👍 Goal Anda sudah cukup untuk kita mulai.")
+        baris.append("_Saran di atas bisa membantu memperkuat tujuan Anda ke depannya._")
     else:
-        baris.append(
-            f"\n_Goal Anda memenuhi {skor} dari 5 kriteria. "
-            "Apakah ingin memperbaikinya, atau lanjutkan saja?_"
-        )
+        baris.append("\n💡 Goal Anda masih bisa diperkuat — tapi tidak apa-apa, kita tetap lanjutkan!")
+        baris.append("_Saran di atas bisa Anda pertimbangkan sambil berjalan._")
 
     return {
         "skor": skor,
@@ -108,66 +106,62 @@ def evaluasi_smart(teks: str) -> dict:
 
 # ─── REKOMENDASI KEBAJIKAN ───────────────────────────────────────────────────
 
-# Kata kunci per kebajikan — dicocokkan dengan teks goal
+# Kebajikan 10 dikecualikan dari rekomendasi otomatis
+KEBAJIKAN_AKTIF = {k: v for k, v in KEBAJIKAN.items() if k != 10}
+
 KATA_KUNCI_KEBAJIKAN = {
     1: ["sehat", "kesehatan", "hidup", "sakit", "tubuh", "olahraga", "tidur",
-        "makan", "minum", "jaga diri", "keselamatan", "cedera"],
+        "makan", "minum", "jaga diri", "keselamatan", "cedera", "istirahat"],
     2: ["berbagi", "memberi", "murah hati", "dermawan", "sumbangan", "membantu",
-        "uang", "harta", "rejeki", "keuangan", "investasi", "tabungan"],
+        "uang", "harta", "rejeki", "keuangan", "investasi", "tabungan", "menabung"],
     3: ["keluarga", "pasangan", "suami", "istri", "hubungan", "pernikahan",
-        "setia", "kepercayaan", "komitmen", "anak", "orang tua"],
-    4: ["jujur", "kejujuran", "janji", "komitmen", "integritas", "transparansi",
-        "berbohong", "terbuka", "percaya", "kepercayaan"],
-    5: ["konflik", "bertengkar", "damai", "harmonis", "hubungan", "orang lain",
-        "bersama", "tim", "komunitas", "kelompok", "kebersamaan"],
+        "setia", "kepercayaan", "komitmen", "anak", "orang tua", "rumah tangga"],
+    4: ["jujur", "kejujuran", "janji", "integritas", "transparansi",
+        "terbuka", "percaya", "menepati", "amanah"],
+    5: ["konflik", "bertengkar", "damai", "harmonis", "orang lain",
+        "bersama", "tim", "komunitas", "kelompok", "kebersamaan", "rukun"],
     6: ["bicara", "kata-kata", "komunikasi", "berbicara", "perkataan",
-        "ramah", "sopan", "lembut", "sabar", "nada", "amarah"],
-    7: ["fokus", "produktif", "waktu", "efisien", "berguna", "bermanfaat",
-        "konsentrasi", "tujuan", "rencana", "kerja"],
+        "ramah", "sopan", "lembut", "sabar", "nada", "amarah", "marah", "emosi"],
+    7: ["fokus", "produktif", "efisien", "berguna", "bermanfaat",
+        "konsentrasi", "rencana", "kerja", "tugas", "pekerjaan", "karir"],
     8: ["syukur", "bersyukur", "bahagia", "senang", "gembira", "positif",
-        "iri", "cemburu", "kepuasan", "apresiasi"],
-    9: ["empati", "peduli", "simpati", "membantu", "orang lain", "perhatian",
-        "mendukung", "mendengarkan", "kasih", "menolong"],
-    10: ["belajar", "memahami", "mengerti", "wisdom", "bijak", "filosofi",
-         "makna", "tujuan hidup", "prinsip", "nilai", "refleksi"],
+        "iri", "cemburu", "kepuasan", "apresiasi", "terima kasih"],
+    9: ["empati", "peduli", "simpati", "membantu", "perhatian",
+        "mendukung", "mendengarkan", "kasih", "menolong", "sosial"],
 }
 
-# Pasangan pendukung alami per kebajikan utama
+# Pasangan pendukung — tidak menggunakan kebajikan 10
 PASANGAN_PENDUKUNG = {
-    1: [9, 2],   # Lindungi Hidup → Empati, Murah Hati
-    2: [8, 9],   # Murah Hati → Syukur, Empati
-    3: [4, 6],   # Hormati Hubungan → Jujur, Ramah
-    4: [7, 5],   # Jujur → Berguna, Bawa Bersama
-    5: [6, 9],   # Bawa Bersama → Ramah, Empati
-    6: [5, 9],   # Ramah → Bawa Bersama, Empati
-    7: [4, 10],  # Berguna → Jujur, Pandangan Benar
-    8: [9, 10],  # Bahagia Org Lain → Empati, Pandangan Benar
-    9: [8, 5],   # Empati → Bahagia Org Lain, Bawa Bersama
-    10: [4, 8],  # Pandangan Benar → Jujur, Bahagia Org Lain
+    1: [9, 2],
+    2: [8, 9],
+    3: [4, 6],
+    4: [7, 5],
+    5: [6, 9],
+    6: [5, 9],
+    7: [4, 8],
+    8: [9, 5],
+    9: [8, 5],
 }
+
 
 def rekomendasikan_kebajikan(teks_goal: str) -> dict:
     """
-    Dari teks goal, rekomendasikan:
-    - 1 kebajikan utama (paling relevan)
-    - 2 kebajikan pendukung
-    Return: {'utama': int, 'pendukung': [int, int], 'alasan': str}
+    Dari teks goal, rekomendasikan 1 kebajikan utama + 2 pendukung.
+    Kebajikan 10 dikecualikan dari rekomendasi otomatis.
+    Fallback ke kebajikan 9 (Empati) jika tidak ada kata kunci yang cocok.
     """
     teks_lower = teks_goal.lower()
     skor = {}
 
     for k_id, kata_list in KATA_KUNCI_KEBAJIKAN.items():
-        cocok = sum(1 for kata in kata_list if kata in teks_lower)
-        skor[k_id] = cocok
+        skor[k_id] = sum(1 for kata in kata_list if kata in teks_lower)
 
-    # Kebajikan utama: skor tertinggi; fallback ke 10 (Pandangan Benar) jika semua 0
     utama = max(skor, key=lambda k: skor[k])
     if skor[utama] == 0:
-        utama = 10  # Default: Pandangan Dunia yang Benar selalu relevan
+        utama = 9  # Fallback: Empati — universal dan selalu relevan
 
-    pendukung = PASANGAN_PENDUKUNG.get(utama, [8, 9])
+    pendukung = PASANGAN_PENDUKUNG.get(utama, [8, 5])
 
-    # Bangun teks rekomendasi
     k_utama = KEBAJIKAN[utama]
     k_p1 = KEBAJIKAN[pendukung[0]]
     k_p2 = KEBAJIKAN[pendukung[1]]
