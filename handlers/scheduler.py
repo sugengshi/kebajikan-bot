@@ -16,6 +16,12 @@ from utils.messages import (
     format_pengingat, format_ringkasan_positif, format_arsip_pribadi
 )
 from data.kebajikan import KEBAJIKAN, LEVEL_CONFIG
+from data.vows import (
+    ADVANCED_VOWS, SUPER_ADVANCED_VOWS,
+    ADV_TIMES, SA_TIMES,
+    get_adv_vows_for_day, get_sa_vows_for_day,
+    format_vow_message, format_vow_pair_message
+)
 
 logger = logging.getLogger(__name__)
 WIB = pytz.timezone("Asia/Jakarta")
@@ -92,6 +98,24 @@ async def kirim_notifikasi_harian(bot: Bot):
 async def _dispatch(bot: Bot, user_id: int, u: dict, jam: str):
     """Route a single user to the right send function for this hour."""
     try:
+        level = u.get("level", "pemula")
+
+        # Advanced and Super Advanced: 6 vow prompts per day at fixed times
+        if level in ("advanced", "super_advanced"):
+            vow_times = ADV_TIMES if level == "advanced" else SA_TIMES
+            if jam in vow_times:
+                await kirim_sumpah(bot, user_id, level, jam, u)
+                return
+            # Still send 06:00 focus check, 21:00 ringkasan, 21:30 arsip
+            if jam == "06:00":
+                await _kirim_06(bot, user_id)
+            elif jam == "21:00":
+                await kirim_ringkasan(bot, user_id)
+            elif jam == u.get("jam_cofmed", "21:30"):
+                await kirim_arsip(bot, user_id)
+            return
+
+        # Standard levels: existing schedule
         if jam == "06:00":
             await _kirim_06(bot, user_id)
         elif jam == u.get("jam_pagi", "07:00"):
@@ -108,6 +132,55 @@ async def _dispatch(bot: Bot, user_id: int, u: dict, jam: str):
             await kirim_arsip(bot, user_id)
     except Exception as e:
         logger.error(f"Error notifikasi user {user_id} jam {jam}: {e}")
+
+
+async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict):
+    """Send a single vow prompt at the scheduled time for Advanced/Super Advanced."""
+    from datetime import date
+    import pytz
+
+    db_user = await get_user(user_id)
+    if not db_user:
+        return
+
+    # Calculate day number since join
+    join_date_raw = db_user.get("join_date")
+    if not join_date_raw:
+        day_number = 1
+    else:
+        today = datetime.now(WIB).date()
+        if hasattr(join_date_raw, 'date'):
+            jd = join_date_raw.date()
+        else:
+            from datetime import date as dt_date
+            jd = join_date_raw if isinstance(join_date_raw, dt_date) else today
+        day_number = (today - jd).days + 1
+
+    # Get slot index from time
+    times = ADV_TIMES if level == "advanced" else SA_TIMES
+    if jam not in times:
+        return
+    slot_index = times.index(jam)
+
+    # Get vow for this day and slot
+    if level == "advanced":
+        vows_today = get_adv_vows_for_day(day_number)
+        vow = vows_today[slot_index]
+        label = "Sumpah Bodhisattva 🪷"
+        vow_dict = ADVANCED_VOWS
+    else:
+        vows_today = get_sa_vows_for_day(day_number)
+        vow = vows_today[slot_index]
+        label = "Sumpah Tantra 💎"
+        vow_dict = SUPER_ADVANCED_VOWS
+
+    # Format message — handle the 264&265 pair on SA day 44 last slot
+    if isinstance(vow, list):
+        text = format_vow_pair_message(vow, vow_dict, label)
+    else:
+        text = format_vow_message(vow, vow_dict, label)
+
+    await bot.send_message(chat_id=user_id, text=text, parse_mode="Markdown")
 
 
 # ─── INDIVIDUAL SEND FUNCTIONS ───────────────────────────────────────────────

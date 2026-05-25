@@ -1,5 +1,7 @@
 # handlers/conversation.py
 import logging
+import os
+from datetime import date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ContextTypes, ConversationHandler, CommandHandler,
@@ -30,7 +32,9 @@ logger = logging.getLogger(__name__)
     REFLEKSI_RENCANA,
     TAMBAHAN_MALAM_INPUT,
     GANTI_PILIH,
-) = range(9)
+    UPGRADE_PASSWORD,
+    PILIH_VOW_AWAL,
+) = range(11)
 
 
 # ─── KEYBOARDS ───────────────────────────────────────────────────────────────
@@ -297,7 +301,7 @@ async def _simpan_dan_selesai(query, context: ContextTypes.DEFAULT_TYPE):
         "20:00 — Tambahan perbuatan baik\n"
         "21:00 — Ringkasan positif\n"
         "21:30 — Arsip pribadi\n\n"
-        "Gunakan /setjam untuk mengustomisasi jadwal. 🙏"
+        "Gunakan /setjam untuk melakukan pengaturan waktu notifikasi. 🙏"
     )
 
     await query.message.reply_text("\n".join(lines), parse_mode="Markdown")
@@ -514,6 +518,213 @@ def _sesi_sekarang() -> str:
         return "sore"
 
 
+# ─── LEVEL UPGRADE ───────────────────────────────────────────────────────────
+
+async def cmd_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show level options and allow free upgrade to Menengah/Mahir, or password for Advanced/Super."""
+    user_id = update.effective_user.id
+    db_user = await get_user(user_id)
+    if not db_user:
+        await update.message.reply_text("Silakan mulai dengan /start.")
+        return ConversationHandler.END
+
+    current = db_user.get("level", "pemula")
+    kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🌱 Pemula", callback_data="upgrade_pemula")],
+        [InlineKeyboardButton("🌿 Praktisi Menengah", callback_data="upgrade_menengah")],
+        [InlineKeyboardButton("🌳 Praktisi Mahir", callback_data="upgrade_mahir")],
+        [InlineKeyboardButton("🪷 Advanced (Sumpah Bodhisattva)", callback_data="upgrade_advanced")],
+        [InlineKeyboardButton("💎 Super Advanced (Sumpah Tantra)", callback_data="upgrade_super_advanced")],
+    ])
+    await update.message.reply_text(
+        f"📊 *Ubah Level Praktik*\n\nLevel Anda saat ini: *{current}*\n\n"
+        "Pilih level baru. Advanced dan Super Advanced memerlukan kata sandi.",
+        parse_mode="Markdown",
+        reply_markup=kb
+    )
+    return UPGRADE_PASSWORD
+
+
+async def upgrade_level_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    target = query.data.replace("upgrade_", "")
+    context.user_data["upgrade_target"] = target
+
+    # Free levels — no password needed
+    if target in ("pemula", "menengah", "mahir"):
+        await _apply_level_upgrade(query, context, target)
+        return ConversationHandler.END
+
+    # Password-protected levels
+    label = "Advanced 🪷 (Sumpah Bodhisattva)" if target == "advanced" else "Super Advanced 💎 (Sumpah Tantra)"
+    await query.edit_message_text(
+        f"🔐 *{label}*\n\nMasukkan kata sandi untuk mengakses level ini:",
+        parse_mode="Markdown"
+    )
+    return UPGRADE_PASSWORD
+
+
+async def terima_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    target = context.user_data.get("upgrade_target", "")
+    entered = update.message.text.strip()
+
+    # Check password from environment variables
+    env_key = "PASS_ADVANCED" if target == "advanced" else "PASS_SUPER"
+    correct = os.environ.get(env_key, "")
+
+    if not correct:
+        await update.message.reply_text(
+            "⚠️ Kata sandi belum dikonfigurasi. Hubungi administrator."
+        )
+        return ConversationHandler.END
+
+    if entered != correct:
+        await update.message.reply_text(
+            "❌ Kata sandi salah. Gunakan /level untuk mencoba lagi."
+        )
+        context.user_data.clear()
+        return ConversationHandler.END
+
+    # Correct password — ask for starting vow
+    return await _tanya_vow_awal(update.message, context, target)
+
+
+async def _tanya_vow_awal(message, context, target):
+    """After correct password, ask which vow to start from."""
+    if target == "advanced":
+        max_vow = 147
+        info = (
+            "🪷 *Kata sandi diterima!*\n\n"
+            "Dari sumpah nomor berapa Anda ingin memulai?\n\n"
+            "_Ketik angka 1\u2013147. Contoh: ketik *32* untuk memulai dari hari ke-10 "
+            "(di mana sumpah #32 muncul di slot pertama)._\n\n"
+            "Atau ketik *1* untuk memulai dari awal."
+        )
+    else:
+        max_vow = 265
+        info = (
+            "💎 *Kata sandi diterima!*\n\n"
+            "Dari sumpah nomor berapa Anda ingin memulai?\n\n"
+            "_Ketik angka 1\u2013265. Contoh: ketik *11* untuk memulai dari hari ke-11 "
+            "(di mana sumpah #11 muncul di slot pertama)._\n\n"
+            "Atau ketik *1* untuk memulai dari awal."
+        )
+    context.user_data["upgrade_target"] = target
+    context.user_data["upgrade_max_vow"] = max_vow
+    await message.reply_text(info, parse_mode="Markdown")
+    return PILIH_VOW_AWAL
+
+
+async def terima_vow_awal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Receive starting vow number and apply upgrade."""
+    from data.vows import adv_vow_to_day, sa_vow_to_day, day_to_start_date
+    target = context.user_data.get("upgrade_target", "advanced")
+    max_vow = context.user_data.get("upgrade_max_vow", 147)
+
+    try:
+        vow_num = int(update.message.text.strip())
+        if not 1 <= vow_num <= max_vow:
+            raise ValueError
+    except ValueError:
+        await update.message.reply_text(
+            f"⚠️ Masukkan angka antara 1 dan {max_vow}. Coba lagi:"
+        )
+        return PILIH_VOW_AWAL
+
+    # Back-calculate day number and join_date
+    if target == "advanced":
+        day_number = adv_vow_to_day(vow_num)
+    else:
+        day_number = sa_vow_to_day(vow_num)
+
+    join_date = day_to_start_date(day_number)
+    context.user_data["upgrade_join_date"] = join_date
+    context.user_data["upgrade_start_vow"] = vow_num
+    context.user_data["upgrade_day_number"] = day_number
+
+    label = "Advanced 🪷" if target == "advanced" else "Super Advanced 💎"
+    await update.message.reply_text(
+        f"✅ *Konfirmasi:*\n\n"
+        f"Level: *{label}*\n"
+        f"Mulai dari sumpah: *#{vow_num}*\n"
+        f"(Hari ke-{day_number} dalam rotasi)\n\n"
+        f"Apakah sudah benar?",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("✅ Ya, mulai!", callback_data="konfirmasi_vow_awal"),
+                InlineKeyboardButton("✏️ Ubah", callback_data="ubah_vow_awal"),
+            ]
+        ])
+    )
+    return PILIH_VOW_AWAL
+
+    return PILIH_VOW_AWAL
+
+
+async def konfirmasi_vow_awal_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if query.data == "ubah_vow_awal":
+        target = context.user_data.get("upgrade_target", "advanced")
+        await query.message.reply_text("Ketik ulang nomor sumpah awal:")
+        return PILIH_VOW_AWAL
+    # Apply with custom join_date
+    join_date = context.user_data.get("upgrade_join_date")
+    target = context.user_data.get("upgrade_target")
+    await _apply_level_upgrade(query, context, target, join_date=join_date)
+    return ConversationHandler.END
+
+
+async def _apply_level_upgrade(source, context, target, join_date=None):
+    """Apply level change and set join_date for advanced levels."""
+    from data.kebajikan import LEVEL_CONFIG
+    cfg = LEVEL_CONFIG.get(target, {})
+
+    user_id = source.from_user.id
+    update_kwargs = {"level": target}
+
+    if target in ("advanced", "super_advanced"):
+        # Use provided join_date (from vow selection) or default to today (= day 1)
+        update_kwargs["join_date"] = join_date if join_date else date.today().isoformat()
+        # All 10 kebajikan still active for the 06:00 check
+        update_kwargs["kebajikan_fokus"] = list(range(1, 11))
+
+    await update_user(user_id, **update_kwargs)
+
+    label_map = {
+        "pemula": "Pemula 🌱",
+        "menengah": "Praktisi Menengah 🌿",
+        "mahir": "Praktisi Mahir 🌳",
+        "advanced": "Advanced 🪷",
+        "super_advanced": "Super Advanced 💎",
+    }
+
+    extra = ""
+    if target == "advanced":
+        extra = (
+            "\n\n🪷 *Sumpah Bodhisattva* akan dikirim 6 kali sehari:\n"
+            "07:00 · 09:30 · 12:00 · 14:30 · 17:00 · 19:30\n"
+            "Rotasi 147 hari — setiap sumpah muncul sekali per siklus."
+        )
+    elif target == "super_advanced":
+        extra = (
+            "\n\n💎 *Sumpah Tantra* akan dikirim 6 kali sehari:\n"
+            "07:00 · 09:30 · 12:00 · 14:30 · 17:00 · 19:30\n"
+            "Rotasi 44 hari — 265 sumpah dalam satu siklus."
+        )
+
+    text = f"✅ Level berhasil diubah ke *{label_map[target]}*!{extra}\n\n_Semoga praktik Anda semakin mendalam._ 🙏"
+
+    if hasattr(source, "edit_message_text"):
+        await source.edit_message_text(text, parse_mode="Markdown")
+    else:
+        await source.reply_text(text, parse_mode="Markdown")
+
+    context.user_data.clear()
+
+
 # ─── CONVERSATION HANDLER ────────────────────────────────────────────────────
 def build_conversation_handler():
     return ConversationHandler(
@@ -522,6 +733,7 @@ def build_conversation_handler():
             CommandHandler("refleksi", cmd_refleksi),
             CommandHandler("ganti", cmd_ganti),
             CommandHandler("tambahan", cmd_tambahan),
+            CommandHandler("level", cmd_level),
         ],
         states={
             PILIH_LEVEL: [
@@ -540,6 +752,14 @@ def build_conversation_handler():
             ],
             GANTI_PILIH: [
                 CallbackQueryHandler(pilih_kebajikan_cb, pattern="^pilih_k_|^selesai_pilih$"),
+            ],
+            UPGRADE_PASSWORD: [
+                CallbackQueryHandler(upgrade_level_cb, pattern="^upgrade_"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_password),
+            ],
+            PILIH_VOW_AWAL: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_vow_awal),
+                CallbackQueryHandler(konfirmasi_vow_awal_cb, pattern="^konfirmasi_vow_awal$|^ubah_vow_awal$"),
             ],
             REFLEKSI_POSITIF: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, terima_refleksi_positif)
