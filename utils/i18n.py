@@ -390,23 +390,53 @@ STRINGS = {
     },
     "vow_awal_konfirmasi": {
         "id": (
-            "✅ *Konfirmasi:*\n\n"
+            "✅ *Konfirmasi Mulai Sumpah*\n\n"
             "Level: *{label}*\n"
-            "Mulai dari sumpah: *#{vow_num}*\n"
-            "(Hari ke-{day_number} dalam rotasi)\n\n"
-            "Apakah sudah benar?"
+            "Mulai dari sumpah: *#{vow_num}* (Hari ke-{day_number})\n\n"
+            "─────────────────────\n"
+            "*Jadwal sumpah hari ini:*\n"
+            "{jadwal}\n"
+            "─────────────────────\n\n"
+            "Anda siap memulai. Ketuk tombol di bawah untuk mengatur jam notifikasi jika diperlukan."
         ),
         "en": (
-            "✅ *Confirmation:*\n\n"
+            "✅ *Vow Start Confirmation*\n\n"
             "Level: *{label}*\n"
-            "Starting from vow: *#{vow_num}*\n"
-            "(Day {day_number} in the rotation)\n\n"
-            "Is this correct?"
+            "Starting from vow: *#{vow_num}* (Day {day_number})\n\n"
+            "─────────────────────\n"
+            "*Today's vow schedule:*\n"
+            "{jadwal}\n"
+            "─────────────────────\n\n"
+            "You're all set. Tap below to adjust notification times if needed."
         ),
     },
-    "vow_konfirmasi_ya":   {"id": "✅ Ya, mulai!", "en": "✅ Yes, start!"},
-    "vow_konfirmasi_ubah": {"id": "✏️ Ubah",       "en": "✏️ Change"},
-    "vow_ubah_prompt":     {"id": "Ketik ulang nomor sumpah awal:", "en": "Type the starting vow number again:"},
+    "vow_konfirmasi_ya":      {"id": "✅ Ya, mulai!",        "en": "✅ Yes, start!"},
+    "vow_konfirmasi_ubah":    {"id": "✏️ Ubah sumpah",      "en": "✏️ Change vow"},
+    "vow_konfirmasi_jam":     {"id": "⏰ Atur jam notifikasi","en": "⏰ Set notification times"},
+    "vow_ubah_prompt":        {"id": "Ketik ulang nomor sumpah awal:", "en": "Type the starting vow number again:"},
+    "vow_jam_prompt": {
+        "id": (
+            "⏰ *Atur Jam Notifikasi Sumpah*\n\n"
+            "Sumpah dikirim 6 kali sehari. Ketik 6 jam dalam format HH:MM, dipisah spasi:\n\n"
+            "_Contoh: `07:00 09:30 12:00 14:30 17:00 19:30`_\n\n"
+            "Atau ketuk *Gunakan default* untuk menggunakan jadwal standar."
+        ),
+        "en": (
+            "⏰ *Set Vow Notification Times*\n\n"
+            "Vows are sent 6 times a day. Type 6 times in HH:MM format, separated by spaces:\n\n"
+            "_Example: `07:00 09:30 12:00 14:30 17:00 19:30`_\n\n"
+            "Or tap *Use default* to use the standard schedule."
+        ),
+    },
+    "vow_jam_default_label":  {"id": "✅ Gunakan default", "en": "✅ Use default"},
+    "vow_jam_invalid": {
+        "id": "⚠️ Format tidak valid. Ketik tepat 6 jam dalam format HH:MM, dipisah spasi:",
+        "en": "⚠️ Invalid format. Type exactly 6 times in HH:MM format, separated by spaces:",
+    },
+    "vow_jam_dikonfirmasi": {
+        "id": "✅ Jam notifikasi disimpan:\n{jadwal_jam}",
+        "en": "✅ Notification times saved:\n{jadwal_jam}",
+    },
     "upgrade_berhasil_advanced": {
         "id": (
             "✅ Level berhasil diubah ke *{label}*!\n\n"
@@ -487,7 +517,7 @@ STRINGS = {
             "/level — Ubah level praktik\n"
             "/language — Ganti bahasa\n"
             "/setjam — Atur jam notifikasi\n"
-            "/bantuan — Tampilkan menu ini"
+            "/help — Tampilkan menu ini"
         ),
         "en": (
             "📖 *Command List:*\n\n"
@@ -500,7 +530,7 @@ STRINGS = {
             "/level — Change practice level\n"
             "/language — Change language\n"
             "/setjam — Set notification times\n"
-            "/bantuan — Show this menu"
+            "/help — Show this menu"
         ),
     },
     "setjam_bantuan": {

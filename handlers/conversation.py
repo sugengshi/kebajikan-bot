@@ -41,7 +41,8 @@ logger = logging.getLogger(__name__)
     GANTI_PILIH,
     UPGRADE_PASSWORD,
     PILIH_VOW_AWAL,
-) = range(12)
+    PILIH_JAM_VOW,
+) = range(13)
 
 
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -142,7 +143,8 @@ def kb_vow_awal_konfirmasi(lang: str = "id"):
         [
             InlineKeyboardButton(T("vow_konfirmasi_ya", lang),   callback_data="konfirmasi_vow_awal"),
             InlineKeyboardButton(T("vow_konfirmasi_ubah", lang), callback_data="ubah_vow_awal"),
-        ]
+        ],
+        [InlineKeyboardButton(T("vow_konfirmasi_jam", lang), callback_data="atur_jam_vow")],
     ])
 
 
@@ -639,6 +641,38 @@ async def _tanya_vow_awal(message, context, target, lang):
     return PILIH_VOW_AWAL
 
 
+async def _apply_level_upgrade_direct(user_id: int, context, target: str, join_date):
+    """Apply level upgrade to DB without sending any message."""
+    update_kwargs = {"level": target}
+    if target in ("advanced", "super_advanced"):
+        update_kwargs["join_date"] = join_date if join_date else date.today()
+        update_kwargs["kebajikan_fokus"] = list(range(1, 11))
+    db_user = await get_user(user_id)
+    if db_user and not db_user.get("onboarding_selesai"):
+        update_kwargs["onboarding_selesai"] = 1
+    await update_user(user_id, **update_kwargs)
+
+
+def _format_vow_schedule(target: str, day_number: int, lang: str) -> str:
+    """Format the 6-vow schedule for a given day for display."""
+    from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
+                           ADVANCED_VOWS, SUPER_ADVANCED_VOWS, ADV_TIMES, SA_TIMES)
+    times = ADV_TIMES if target == "advanced" else SA_TIMES
+    vows = get_adv_vows_for_day(day_number) if target == "advanced" else get_sa_vows_for_day(day_number)
+    vow_dict = ADVANCED_VOWS if target == "advanced" else SUPER_ADVANCED_VOWS
+    lines = []
+    for i, (t, v) in enumerate(zip(times, vows)):
+        if isinstance(v, list):
+            nums = " & ".join(f"#{n}" for n in v)
+            lines.append(f"{t} — {nums}")
+        else:
+            en, id_ = vow_dict.get(v, ("?", "?"))
+            text = id_ if lang == "id" else en
+            short = text[:55] + "..." if len(text) > 55 else text
+            lines.append(f"{t} — *#{v}* _{short}_")
+    return "\n".join(lines)
+
+
 async def terima_vow_awal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from data.vows import adv_vow_to_day, sa_vow_to_day, day_to_start_date
     user_id = update.effective_user.id
@@ -673,34 +707,87 @@ async def terima_vow_awal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     label_key = "level_advanced_label" if target == "advanced" else "level_super_label"
     label = T(label_key, lang)
 
+    # Apply upgrade immediately — no confirmation needed
+    await _apply_level_upgrade_direct(update.effective_user.id, context, target, join_date)
+
+    # Show schedule and offer time customization
+    jadwal = _format_vow_schedule(target, day_number, lang)
+
     await update.message.reply_text(
-        T("vow_awal_konfirmasi", lang, label=label, vow_num=vow_num, day_number=day_number),
+        T("vow_awal_konfirmasi", lang, label=label, vow_num=vow_num,
+          day_number=day_number, jadwal=jadwal),
         parse_mode="Markdown",
-        reply_markup=kb_vow_awal_konfirmasi(lang)
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(T("vow_konfirmasi_jam", lang), callback_data="atur_jam_vow")]
+        ])
     )
-    return PILIH_VOW_AWAL
+    return PILIH_JAM_VOW
 
 
 async def konfirmasi_vow_awal_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles only atur_jam_vow — upgrade already applied in terima_vow_awal."""
     query = update.callback_query
     await query.answer()
     lang = await _lang(query.from_user.id, context)
 
-    if query.data == "ubah_vow_awal":
-        await query.message.reply_text(T("vow_ubah_prompt", lang))
-        return PILIH_VOW_AWAL
-
-    join_date = context.user_data.get("upgrade_join_date")
-    target = context.user_data.get("upgrade_target")
-    logger.info(f"konfirmasi_vow_awal_cb: target={target!r} join_date={join_date!r}")
-    if not target:
+    if query.data == "atur_jam_vow":
+        db_user = await get_user(query.from_user.id)
+        current_times = (db_user.get("vow_times") or "07:00 09:30 12:00 14:30 17:00 19:30") if db_user else "07:00 09:30 12:00 14:30 17:00 19:30"
         await query.message.reply_text(
-            "⚠️ Sesi tidak ditemukan. Gunakan /start atau /level untuk memulai ulang." if lang == "id"
-            else "⚠️ Session not found. Use /start or /level to start over."
+            T("vow_jam_prompt", lang) + f"\n\n_Jadwal saat ini: `{current_times}`_",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton(T("vow_jam_default_label", lang), callback_data="jam_vow_default")]
+            ])
         )
-        return ConversationHandler.END
-    await _apply_level_upgrade(query, context, target, join_date=join_date)
+        return PILIH_JAM_VOW
+
     return ConversationHandler.END
+
+
+async def terima_jam_vow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Receive 6 custom notification times for vow levels."""
+    lang = await _lang(update.effective_user.id, context)
+    teks = update.message.text.strip()
+    parts = teks.split()
+    valid = True
+    if len(parts) != 6:
+        valid = False
+    else:
+        import re
+        for p in parts:
+            if not re.match(r"^\d{2}:\d{2}$", p):
+                valid = False
+                break
+            h, m = p.split(":")
+            if not (0 <= int(h) <= 23 and 0 <= int(m) <= 59):
+                valid = False
+                break
+
+    if not valid:
+        await update.message.reply_text(T("vow_jam_invalid", lang))
+        return PILIH_JAM_VOW
+
+    await update_user(update.effective_user.id, vow_times=teks)
+    jadwal_jam = "\n".join(f"  {p}" for p in parts)
+    await update.message.reply_text(
+        T("vow_jam_dikonfirmasi", lang, jadwal_jam=jadwal_jam),
+        parse_mode="Markdown"
+    )
+    return PILIH_VOW_AWAL
+
+
+async def jam_vow_default_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+    default = "07:00 09:30 12:00 14:30 17:00 19:30"
+    await update_user(query.from_user.id, vow_times=default)
+    await query.edit_message_text(
+        T("vow_jam_dikonfirmasi", lang, jadwal_jam="\n  ".join(default.split())),
+        parse_mode="Markdown"
+    )
+    return PILIH_VOW_AWAL
 
 
 async def _apply_level_upgrade(source, context, target, join_date=None):
@@ -853,7 +940,11 @@ def build_conversation_handler():
             ],
             PILIH_VOW_AWAL: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, terima_vow_awal),
-                CallbackQueryHandler(konfirmasi_vow_awal_cb, pattern="^konfirmasi_vow_awal$|^ubah_vow_awal$"),
+            ],
+            PILIH_JAM_VOW: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_jam_vow),
+                CallbackQueryHandler(jam_vow_default_cb, pattern="^jam_vow_default$"),
+                CallbackQueryHandler(konfirmasi_vow_awal_cb, pattern="^atur_jam_vow$"),
             ],
         },
         fallbacks=[CommandHandler("start", start)],
