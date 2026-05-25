@@ -83,6 +83,14 @@ async def init_db():
                 PRIMARY KEY (user_id, sesi, tanggal)
             )
         """)
+        # Migrations — add new columns to existing tables safely
+        await conn.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS bahasa TEXT DEFAULT 'id'
+        """)
+        await conn.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS join_date DATE
+        """)
+
         # Indexes for common query patterns
         await conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_catatan_user_tanggal

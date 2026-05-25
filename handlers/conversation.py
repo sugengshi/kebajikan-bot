@@ -626,9 +626,20 @@ async def _tanya_vow_awal(message, context, target, lang):
 
 async def terima_vow_awal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from data.vows import adv_vow_to_day, sa_vow_to_day, day_to_start_date
-    lang = await _lang(update.effective_user.id, context)
-    target = context.user_data.get("upgrade_target", "advanced")
-    max_vow = context.user_data.get("upgrade_max_vow", 147)
+    user_id = update.effective_user.id
+    lang = await _lang(user_id, context)
+    target = context.user_data.get("upgrade_target", "")
+    max_vow = context.user_data.get("upgrade_max_vow", 0)
+
+    logger.info(f"terima_vow_awal: user={user_id} target={target!r} max_vow={max_vow} text={update.message.text!r}")
+
+    # Guard: if target/max_vow missing, the state was entered incorrectly
+    if not target or not max_vow:
+        await update.message.reply_text(
+            "⚠️ Sesi tidak ditemukan. Gunakan /level untuk memulai ulang." if lang == "id"
+            else "⚠️ Session not found. Use /level to start over."
+        )
+        return ConversationHandler.END
 
     try:
         vow_num = int(update.message.text.strip())
