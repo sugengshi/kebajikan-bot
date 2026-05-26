@@ -170,13 +170,27 @@ def _get_entry_header(c: dict, lang: str, hide_sesi_label: bool = False) -> str:
             return f"*{jam}* — 📿 *#{k_id}* _{short}_"
         return f"*{jam}* — 📿 *#{k_id}*"
     else:
+        # Check if k_id is actually a vow number (>10) stored with wrong sesi
+        from data.vows import ADVANCED_VOWS, SUPER_ADVANCED_VOWS
+        vow_text = ADVANCED_VOWS.get(k_id) or SUPER_ADVANCED_VOWS.get(k_id)
+        if vow_text:
+            en_t, id_t = vow_text
+            short = (id_t if lang == "id" else en_t)[:55]
+            if len(id_t if lang == "id" else en_t) > 55:
+                short += "..."
+            # Show time from sesi if it contains time info, else just vow
+            if ":" in sesi:
+                return f"*{sesi}* — 📿 *#{k_id}* _{short}_"
+            return f"📿 *#{k_id}* _{short}_"
+        # Standard kebajikan (id 1-10)
         k = get_kebajikan_by_id(k_id)
-        nama = k["nama"] if k else "Kebajikan"
-        if lang == "en" and k:
+        if not k or not k.get("nama"):
+            return f"📿 *#{k_id}*"
+        nama = k["nama"]
+        if lang == "en":
             nama = k.get("nama_en", nama)
-        emoji = k["emoji"] if k else "•"
+        emoji = k.get("emoji", "•")
         if hide_sesi_label:
-            # Advanced/Super: don't show Morning/Midday/Afternoon label
             return f"{emoji} *{nama}*"
         sesi_label = _sesi_label(sesi, lang)
         return f"*{sesi_label}* — {emoji} _{nama}_"

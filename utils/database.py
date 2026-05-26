@@ -233,17 +233,30 @@ async def save_catatan(user_id: int, sesi: str, kebajikan_id: int,
     tanggal = _today()
     _log.info(f"save_catatan: user={user_id} sesi={sesi!r} vow={kebajikan_id} tanggal={tanggal}")
     async with _pool_conn() as conn:
-        await conn.execute("""
-            INSERT INTO catatan_harian
-                (user_id, tanggal, sesi, kebajikan_id,
-                 catatan_positif, catatan_negatif, rencana_kedepan)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (user_id, tanggal, sesi, kebajikan_id)
-            DO UPDATE SET
-                catatan_positif = EXCLUDED.catatan_positif,
-                catatan_negatif = EXCLUDED.catatan_negatif,
-                rencana_kedepan = EXCLUDED.rencana_kedepan
-        """, user_id, tanggal, sesi, kebajikan_id, positif, negatif, rencana)
+        try:
+            await conn.execute("""
+                INSERT INTO catatan_harian
+                    (user_id, tanggal, sesi, kebajikan_id,
+                     catatan_positif, catatan_negatif, rencana_kedepan)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (user_id, tanggal, sesi, kebajikan_id)
+                DO UPDATE SET
+                    catatan_positif = EXCLUDED.catatan_positif,
+                    catatan_negatif = EXCLUDED.catatan_negatif,
+                    rencana_kedepan = EXCLUDED.rencana_kedepan
+            """, user_id, tanggal, sesi, kebajikan_id, positif, negatif, rencana)
+        except Exception as e:
+            _log.warning(f"save_catatan conflict fallback: {e}")
+            # Fallback: try without ON CONFLICT (for old constraint schema)
+            try:
+                await conn.execute("""
+                    INSERT INTO catatan_harian
+                        (user_id, tanggal, sesi, kebajikan_id,
+                         catatan_positif, catatan_negatif, rencana_kedepan)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                """, user_id, tanggal, sesi, kebajikan_id, positif, negatif, rencana)
+            except Exception as e2:
+                _log.error(f"save_catatan failed completely: {e2}")
 
 
 async def get_catatan_hari_ini(user_id: int) -> list:
@@ -252,7 +265,7 @@ async def get_catatan_hari_ini(user_id: int) -> list:
         rows = await conn.fetch("""
             SELECT * FROM catatan_harian
             WHERE user_id = $1 AND tanggal = $2
-            ORDER BY created_at
+            ORDER BY sesi
         """, user_id, tanggal)
         return [dict(r) for r in rows]
 
@@ -274,7 +287,7 @@ async def get_tambahan_malam(user_id: int) -> list:
         rows = await conn.fetch("""
             SELECT catatan FROM tambahan_malam
             WHERE user_id = $1 AND tanggal = $2
-            ORDER BY created_at
+            ORDER BY sesi
         """, user_id, tanggal)
         return [r["catatan"] for r in rows]
 
