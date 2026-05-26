@@ -284,6 +284,23 @@ STRINGS = {
         "id": "Silakan mulai dengan /start.",
         "en": "Please start with /start.",
     },
+    "refleksi_pilih_kebajikan": {
+        "id": (
+            "📝 *Pilih kebajikan yang ingin Anda refleksikan:*\n\n"
+            "_(✅ = sudah diisi hari ini, ○ = belum diisi)_"
+        ),
+        "en": (
+            "📝 *Choose the virtue you want to reflect on:*\n\n"
+            "_(✅ = already filled today, ○ = not yet filled)_"
+        ),
+    },
+    "refleksi_pilih_sesi": {
+        "id": "📝 *Pilih sesi refleksi untuk* {nama}:",
+        "en": "📝 *Choose the reflection session for* {nama}:",
+    },
+    "sesi_pagi_short":  {"id": "🌅 Pagi",  "en": "🌅 Morning"},
+    "sesi_siang_short": {"id": "☀️ Siang", "en": "☀️ Midday"},
+    "sesi_sore_short":  {"id": "🌇 Sore",  "en": "🌇 Afternoon"},
     "refleksi_belum": {
         "id": "Sesi refleksi tidak ditemukan. Gunakan /{cmd_refleksi} untuk memulai.",
         "en": "Reflection session not found. Use /{cmd_refleksi} to start.",

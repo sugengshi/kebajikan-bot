@@ -44,7 +44,9 @@ logger = logging.getLogger(__name__)
     PILIH_VOW_AWAL,
     PILIH_JAM_VOW,
     SETJAM_SEQUENTIAL,
-) = range(15)
+    PILIH_REFLEKSI,
+    PILIH_SESI_REFLEKSI,
+) = range(17)
 
 SETJAM_DB_KEYS    = ["jam_fokus","jam_pagi","jam_siang","jam_sore","jam_malam","jam_ringkasan","jam_cofmed"]
 SETJAM_DEFAULTS   = ["06:00","07:00","12:00","18:00","20:00","21:00","21:30"]
@@ -387,11 +389,111 @@ async def cmd_refleksi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not fokus:
         await update.message.reply_text(T("kebajikan_belum_ada", lang))
         return ConversationHandler.END
-    k_id = fokus[0]
-    sesi = _sesi_sekarang()
+
+    # Check what's already been filled today
+    catatan_hari_ini = await get_catatan_hari_ini(user_id)
+    filled = {(c["kebajikan_id"], c["sesi"]) for c in catatan_hari_ini}
+    sesi_list = ["pagi", "siang", "sore"]
+
+    # If only one kebajikan, skip the selection screen
+    if len(fokus) == 1:
+        k_id = fokus[0]
+        # Find first unfilled sesi
+        sesi = _sesi_sekarang()
+        for s in sesi_list:
+            if (k_id, s) not in filled:
+                sesi = s
+                break
+        await set_pending(user_id, sesi, k_id)
+        await update.message.reply_text(
+            format_pertanyaan_refleksi(sesi, k_id, "positif", lang),
+            parse_mode="Markdown"
+        )
+        return REFLEKSI_POSITIF
+
+    # Multiple kebajikan — let user choose
+    return await _tampilkan_pilihan_refleksi(update.message, context, lang, fokus, filled)
+
+
+async def _tampilkan_pilihan_refleksi(message, context, lang: str, fokus: list, filled: set):
+    """Show inline keyboard of kebajikan with fill status."""
+    sesi_list = ["pagi", "siang", "sore"]
+    rows = []
+    for k_id in fokus:
+        k = KEBAJIKAN.get(k_id, {})
+        if not k:
+            continue
+        # Count filled sesi for this kebajikan
+        filled_count = sum(1 for s in sesi_list if (k_id, s) in filled)
+        total = len(sesi_list)
+        if filled_count == total:
+            status = "✅"
+        elif filled_count > 0:
+            status = f"◐ {filled_count}/{total}"
+        else:
+            status = "○"
+        rows.append([InlineKeyboardButton(
+            f"{status} {k['emoji']} {k['nama']}",
+            callback_data=f"refleksi_k_{k_id}"
+        )])
+    context.user_data["refleksi_filled"] = [(ki, s) for (ki, s) in filled]
+    await message.reply_text(
+        T("refleksi_pilih_kebajikan", lang),
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(rows)
+    )
+    return PILIH_REFLEKSI
+
+
+async def pilih_kebajikan_refleksi_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User chose which kebajikan to reflect on."""
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+    k_id = int(query.data.replace("refleksi_k_", ""))
+    context.user_data["refleksi_k_id"] = k_id
+    k = KEBAJIKAN.get(k_id, {})
+    nama = k.get("nama", "") if k else ""
+
+    filled = set(context.user_data.get("refleksi_filled", []))
+    sesi_list = ["pagi", "siang", "sore"]
+    sesi_short_keys = {"pagi": "sesi_pagi_short", "siang": "sesi_siang_short", "sore": "sesi_sore_short"}
+
+    rows = []
+    for s in sesi_list:
+        is_filled = (k_id, s) in filled
+        label_key = sesi_short_keys[s]
+        label = T(label_key, lang)
+        status = "✅ " if is_filled else "○ "
+        rows.append([InlineKeyboardButton(
+            f"{status}{label}",
+            callback_data=f"refleksi_sesi_{s}"
+        )])
+
+    await query.edit_message_text(
+        T("refleksi_pilih_sesi", lang, nama=nama),
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(rows)
+    )
+    return PILIH_SESI_REFLEKSI
+
+
+async def pilih_sesi_refleksi_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User chose which session to fill."""
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+    sesi = query.data.replace("refleksi_sesi_", "")
+    k_id = context.user_data.get("refleksi_k_id")
+    if not k_id:
+        await query.message.reply_text(T("silakan_start", lang))
+        return ConversationHandler.END
+    user_id = query.from_user.id
     await set_pending(user_id, sesi, k_id)
-    await update.message.reply_text(
-        format_pertanyaan_refleksi(sesi, k_id, "positif", lang), parse_mode="Markdown"
+    await query.edit_message_reply_markup(reply_markup=None)
+    await query.message.reply_text(
+        format_pertanyaan_refleksi(sesi, k_id, "positif", lang),
+        parse_mode="Markdown"
     )
     return REFLEKSI_POSITIF
 
@@ -936,6 +1038,12 @@ def build_conversation_handler():
             SETJAM_SEQUENTIAL: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, terima_setjam),
                 CallbackQueryHandler(lewati_setjam_cb, pattern="^setjam_lewati$"),
+            ],
+            PILIH_REFLEKSI: [
+                CallbackQueryHandler(pilih_kebajikan_refleksi_cb, pattern="^refleksi_k_"),
+            ],
+            PILIH_SESI_REFLEKSI: [
+                CallbackQueryHandler(pilih_sesi_refleksi_cb, pattern="^refleksi_sesi_"),
             ],
         },
         fallbacks=[CommandHandler("start", start)],
