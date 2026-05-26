@@ -5,7 +5,7 @@
 import asyncpg
 import json
 import os
-from datetime import datetime
+from datetime import datetime, date
 import pytz
 
 WIB = pytz.timezone("Asia/Jakarta")
@@ -128,8 +128,9 @@ def _pool_conn():
     return _pool.acquire()
 
 
-def _today() -> str:
-    return datetime.now(WIB).strftime("%Y-%m-%d")
+def _today() -> date:
+    """Return today's date as a date object (required by asyncpg for DATE columns)."""
+    return datetime.now(WIB).date()
 
 
 # ─── USERS ───────────────────────────────────────────────────────────────────
@@ -285,7 +286,7 @@ async def clear_pending(user_id: int):
 
 # ─── COMPAT ALIAS ────────────────────────────────────────────────────────────
 async def get_today_str() -> str:
-    return _today()
+    return _today().isoformat()
 
 
 async def get_user_lang(user_id: int) -> str:
