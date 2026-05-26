@@ -92,6 +92,20 @@ async def init_db():
             )
         """)
         # Migrations — add new columns to existing tables safely
+        # Fix unique constraint to allow multiple vow slots per day
+        try:
+            await conn.execute("""
+                ALTER TABLE catatan_harian
+                DROP CONSTRAINT IF EXISTS catatan_harian_user_id_tanggal_sesi_key
+            """)
+            await conn.execute("""
+                ALTER TABLE catatan_harian
+                ADD CONSTRAINT catatan_harian_user_tanggal_sesi_vow_key
+                UNIQUE (user_id, tanggal, sesi, kebajikan_id)
+            """)
+        except Exception:
+            pass  # constraint may already be correct
+
         for col, default in [
             ("bahasa",        "'id'"),
             ("timezone",      "'Asia/Jakarta'"),

@@ -568,8 +568,10 @@ async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TY
     positif = context.user_data.get("sumpah_positif", "")
     negatif = context.user_data.get("sumpah_negatif", "")
     rencana = update.message.text
-    # Save as catatan using vow number as kebajikan_id, sesi = current
-    sesi = _sesi_sekarang()
+    # For advanced/super: use the vow's time slot as sesi to allow all 6 to be saved
+    # e.g. "slot_07:00", "slot_09:30" — avoids UNIQUE constraint collision
+    jam = context.user_data.get("sumpah_vow_jam", "")
+    sesi = f"slot_{jam}" if jam else _sesi_sekarang()
     await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
     await update.message.reply_text(
         T("sumpah_refleksi_konfirmasi", lang, vow=vow,

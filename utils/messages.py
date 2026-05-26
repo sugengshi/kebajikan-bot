@@ -116,13 +116,28 @@ def format_ringkasan_positif(catatan_list: list, tambahan_list: list, lang: str 
         if not positif:
             continue
         ada_isi = True
-        k = get_kebajikan_by_id(c.get("kebajikan_id", 0))
-        nama = k["nama"] if k else "Kebajikan"
-        if lang == "en" and k:
-            nama = k.get("nama_en", nama)
-        emoji = k["emoji"] if k else "•"
-        sesi_label = _sesi_label(c["sesi"], lang)
-        lines.append(f"*{sesi_label}* — {emoji} _{nama}_")
+        sesi = c.get("sesi", "")
+        k_id = c.get("kebajikan_id", 0)
+        # Advanced/Super Advanced: sesi = "slot_HH:MM", k_id = vow number
+        if sesi.startswith("slot_"):
+            jam = sesi.replace("slot_", "")
+            from data.vows import ADVANCED_VOWS, SUPER_ADVANCED_VOWS
+            vow_text = (ADVANCED_VOWS.get(k_id) or SUPER_ADVANCED_VOWS.get(k_id))
+            if vow_text:
+                en_t, id_t = vow_text
+                vow_label = id_t if lang == "id" else en_t
+                short = vow_label[:50] + "..." if len(vow_label) > 50 else vow_label
+                lines.append(f"*{jam}* — *#{k_id}* _{short}_")
+            else:
+                lines.append(f"*{jam}* — *#{k_id}*")
+        else:
+            k = get_kebajikan_by_id(k_id)
+            nama = k["nama"] if k else "Kebajikan"
+            if lang == "en" and k:
+                nama = k.get("nama_en", nama)
+            emoji = k["emoji"] if k else "•"
+            sesi_label = _sesi_label(sesi, lang)
+            lines.append(f"*{sesi_label}* — {emoji} _{nama}_")
         lines.append(f"✅ {positif}\n")
 
     if tambahan_list:
@@ -149,15 +164,29 @@ def format_arsip_pribadi(catatan_list: list, tambahan_list: list, lang: str = "i
     lines = [T("arsip_judul", lang, sapaan=sapaan, tanggal=now)]
 
     for c in catatan_list:
-        k = get_kebajikan_by_id(c.get("kebajikan_id", 0))
-        nama = k["nama"] if k else "Kebajikan"
-        if lang == "en" and k:
-            nama = k.get("nama_en", nama)
-        emoji = k["emoji"] if k else "•"
-        sesi_label = _sesi_label(c["sesi"], lang)
-
-        lines.append(f"*{sesi_label}*")
-        lines.append(f"{emoji} *{nama}*\n")
+        sesi = c.get("sesi", "")
+        k_id = c.get("kebajikan_id", 0)
+        if sesi.startswith("slot_"):
+            jam = sesi.replace("slot_", "")
+            from data.vows import ADVANCED_VOWS, SUPER_ADVANCED_VOWS
+            vow_text = (ADVANCED_VOWS.get(k_id) or SUPER_ADVANCED_VOWS.get(k_id))
+            if vow_text:
+                en_t, id_t = vow_text
+                short = (id_t if lang == "id" else en_t)[:60]
+                lines.append(f"*{jam}*")
+                lines.append(f"📿 *#{k_id}* _{short}_\n")
+            else:
+                lines.append(f"*{jam}*")
+                lines.append(f"📿 *#{k_id}*\n")
+        else:
+            k = get_kebajikan_by_id(k_id)
+            nama = k["nama"] if k else "Kebajikan"
+            if lang == "en" and k:
+                nama = k.get("nama_en", nama)
+            emoji = k["emoji"] if k else "•"
+            sesi_label = _sesi_label(sesi, lang)
+            lines.append(f"*{sesi_label}*")
+            lines.append(f"{emoji} *{nama}*\n")
 
         positif = c.get("catatan_positif", "").strip()
         negatif = c.get("catatan_negatif", "").strip()
