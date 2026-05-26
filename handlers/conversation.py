@@ -385,20 +385,24 @@ async def cmd_refleksi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     lang = db_user.get("bahasa", "id")
     context.user_data["lang"] = lang
+    level = db_user.get("level", "pemula")
+
+    # ── Advanced / Super Advanced: show today's vow schedule ──
+    if level in ("advanced", "super_advanced"):
+        return await _tampilkan_pilihan_sumpah(update.message, context, lang, db_user)
+
+    # ── Standard levels: show kebajikan ──
     fokus = db_user.get("kebajikan_fokus", [])
     if not fokus:
         await update.message.reply_text(T("kebajikan_belum_ada", lang))
         return ConversationHandler.END
 
-    # Check what's already been filled today
     catatan_hari_ini = await get_catatan_hari_ini(user_id)
     filled = {(c["kebajikan_id"], c["sesi"]) for c in catatan_hari_ini}
     sesi_list = ["pagi", "siang", "sore"]
 
-    # If only one kebajikan, skip the selection screen
     if len(fokus) == 1:
         k_id = fokus[0]
-        # Find first unfilled sesi
         sesi = _sesi_sekarang()
         for s in sesi_list:
             if (k_id, s) not in filled:
@@ -411,8 +415,114 @@ async def cmd_refleksi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return REFLEKSI_POSITIF
 
-    # Multiple kebajikan — let user choose
     return await _tampilkan_pilihan_refleksi(update.message, context, lang, fokus, filled)
+
+
+async def _tampilkan_pilihan_sumpah(message, context, lang: str, db_user: dict):
+    """For Advanced/Super Advanced: show today's vow schedule as selectable buttons."""
+    from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
+                           ADVANCED_VOWS, SUPER_ADVANCED_VOWS, ADV_TIMES, SA_TIMES)
+    from datetime import date as dt_date
+
+    level = db_user.get("level", "advanced")
+    join_date_raw = db_user.get("join_date")
+
+    # Calculate day number
+    today = dt_date.today()
+    if join_date_raw:
+        jd = join_date_raw if isinstance(join_date_raw, dt_date) else today
+        day_number = (today - jd).days + 1
+    else:
+        day_number = 1
+
+    times = ADV_TIMES if level == "advanced" else SA_TIMES
+    vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
+    vow_dict = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
+
+    rows = []
+    for i, (t, v) in enumerate(zip(times, vows)):
+        if isinstance(v, list):
+            nums = " & ".join(str(n) for n in v)
+            label = f"{t} — #{nums}"
+            cb = f"sumpah_slot_{i}"
+        else:
+            en, id_ = vow_dict.get(v, ("?", "?"))
+            text = id_ if lang == "id" else en
+            short = text[:40] + "..." if len(text) > 40 else text
+            label = f"{t} — #{v} {short}"
+            cb = f"sumpah_slot_{i}"
+        rows.append([InlineKeyboardButton(label, callback_data=cb)])
+
+    # Store today's vow list in context for the callback
+    context.user_data["sumpah_vows_today"] = vows
+    context.user_data["sumpah_times_today"] = times
+    context.user_data["sumpah_level"] = level
+
+    await message.reply_text(
+        T("refleksi_pilih_sumpah", lang),
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(rows)
+    )
+    return PILIH_REFLEKSI
+
+
+async def pilih_sumpah_slot_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User selected a vow slot from the schedule — send its reflection prompt."""
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+    slot_index = int(query.data.replace("sumpah_slot_", ""))
+
+    vows = context.user_data.get("sumpah_vows_today", [])
+    times = context.user_data.get("sumpah_times_today", [])
+    level = context.user_data.get("sumpah_level", "advanced")
+
+    if slot_index >= len(vows):
+        await query.message.reply_text(T("silakan_start", lang))
+        return ConversationHandler.END
+
+    vow = vows[slot_index]
+    jam = times[slot_index] if slot_index < len(times) else "?"
+
+    from data.vows import ADVANCED_VOWS, SUPER_ADVANCED_VOWS
+    vow_dict = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
+
+    # Handle 264&265 pair
+    if isinstance(vow, list):
+        from utils.messages import format_vow_pair_message
+        label_key = "sumpah_label_advanced" if level == "advanced" else "sumpah_label_super"
+        label = T(label_key, lang)
+        text = _format_vow_pair_for_reflect(vow, vow_dict, label, jam, lang)
+    else:
+        en, id_ = vow_dict.get(vow, ("?", "?"))
+        vow_text = id_ if lang == "id" else en
+        label_key = "sumpah_label_advanced" if level == "advanced" else "sumpah_label_super"
+        label = T(label_key, lang)
+        sesi_word = "Sumpah" if lang == "id" else "Vow"
+        text = (
+            f"📿 *{label}*\n"
+            f"*{jam} — {sesi_word} #{vow}*\n\n"
+            f"🇬🇧 _{en}_\n\n"
+            f"🇮🇩 _{id_}_\n\n"
+            f"─────────────────────\n"
+            f"_{T('sumpah_renungan', lang)}_"
+        )
+
+    await query.edit_message_reply_markup(reply_markup=None)
+    await query.message.reply_text(text, parse_mode="Markdown")
+    return ConversationHandler.END
+
+
+def _format_vow_pair_for_reflect(vow_list: list, vow_dict: dict, label: str, jam: str, lang: str) -> str:
+    lines = [f"📿 *{label}*\n*{jam}*\n"]
+    for v in vow_list:
+        en, id_ = vow_dict.get(v, ("?", "?"))
+        lines.append(f"*Vow #{v}*")
+        lines.append(f"🇬🇧 _{en}_")
+        lines.append(f"🇮🇩 _{id_}_\n")
+    lines.append("─────────────────────")
+    lines.append(f"_{T('sumpah_renungan', lang)}_")
+    return "\n".join(lines)
 
 
 async def _tampilkan_pilihan_refleksi(message, context, lang: str, fokus: list, filled: set):
@@ -1041,6 +1151,7 @@ def build_conversation_handler():
             ],
             PILIH_REFLEKSI: [
                 CallbackQueryHandler(pilih_kebajikan_refleksi_cb, pattern="^refleksi_k_"),
+                CallbackQueryHandler(pilih_sumpah_slot_cb, pattern="^sumpah_slot_"),
             ],
             PILIH_SESI_REFLEKSI: [
                 CallbackQueryHandler(pilih_sesi_refleksi_cb, pattern="^refleksi_sesi_"),

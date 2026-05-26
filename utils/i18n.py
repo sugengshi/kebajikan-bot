@@ -6,8 +6,8 @@ STRINGS = {
     # ─── ONBOARDING ──────────────────────────────────────────────────────────
 
     "pilih_bahasa": {
-        "id": "🌏 *Selamat datang!*\n\nSilakan pilih bahasa Anda:",
-        "en": "🌏 *Welcome!*\n\nPlease choose your language:",
+        "id": "🌏 *Selamat datang! / Welcome!*\n\nSilakan pilih bahasa Anda. / Please choose your language:",
+        "en": "🌏 *Selamat datang! / Welcome!*\n\nSilakan pilih bahasa Anda. / Please choose your language:",
     },
     "bahasa_dipilih": {
         "id": "✅ Bahasa Indonesia dipilih.",
@@ -283,6 +283,16 @@ STRINGS = {
     "belum_mulai": {
         "id": "Silakan mulai dengan /start.",
         "en": "Please start with /start.",
+    },
+    "refleksi_pilih_sumpah": {
+        "id": (
+            "📿 *Pilih sumpah yang ingin Anda renungkan:*\n\n"
+            "_(Ini adalah jadwal sumpah Anda hari ini)_"
+        ),
+        "en": (
+            "📿 *Choose the vow you want to contemplate:*\n\n"
+            "_(This is your vow schedule for today)_"
+        ),
     },
     "refleksi_pilih_kebajikan": {
         "id": (
