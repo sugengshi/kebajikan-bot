@@ -10,7 +10,7 @@ from utils.database import init_db, get_user, update_user
 from handlers.conversation import (
     build_conversation_handler, cmd_kebajikan, cmd_help,
     cmd_laporan, cmd_level, cmd_language,
-    callback_pagi_ganti, cmd_setjam
+    callback_pagi_ganti, cmd_setjam, laporan_mode_cb
 )
 from handlers.scheduler import init_scheduler
 
@@ -116,8 +116,14 @@ def main():
     app.add_handler(CommandHandler("help",     cmd_help))
     app.add_handler(CommandHandler("bantuan",  cmd_help))
 
+    # Standalone handlers that work even mid-conversation (group 1)
+    from handlers.conversation import cmd_setjam, cmd_help, cmd_kebajikan, cmd_laporan, cmd_level, cmd_language
+    app.add_handler(CommandHandler("setjam",  cmd_setjam),  group=1)
+    app.add_handler(CommandHandler("settime", cmd_setjam),  group=1)
+
     # Callbacks
     app.add_handler(CallbackQueryHandler(callback_pagi_ganti, pattern="^pagi_ganti_"))
+    app.add_handler(CallbackQueryHandler(laporan_mode_cb, pattern="^laporan_"))
 
     logger.info("Bot berjalan...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)

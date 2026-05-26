@@ -663,6 +663,18 @@ STRINGS = {
 
     # ─── LAPORAN & HELP ──────────────────────────────────────────────────────
 
+    "laporan_pilih_mode": {
+        "id": "📋 *Pilih tampilan laporan:*",
+        "en": "📋 *Choose report view:*",
+    },
+    "laporan_mode_ringkas_label": {
+        "id": "✅ Positif & Rencana saja",
+        "en": "✅ Positives & Plans only",
+    },
+    "laporan_mode_lengkap_label": {
+        "id": "📄 Semua entri lengkap",
+        "en": "📄 All entries in full",
+    },
     "laporan_kosong": {
         "id": "📋 Belum ada catatan hari ini.\nGunakan /{cmd_refleksi} untuk mulai.",
         "en": "📋 No notes for today yet.\nUse /{cmd_refleksi} to start.",

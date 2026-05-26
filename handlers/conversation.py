@@ -17,6 +17,7 @@ from utils.database import (
 from utils.messages import (
     format_pertanyaan_refleksi, format_konfirmasi_sesi,
     format_ringkasan_positif, format_pertanyaan_tambahan_malam,
+    format_laporan_ringkas, format_laporan_lengkap,
     format_sambutan, format_tujuan_smart, format_smart_revisi,
     format_onboarding_selesai, format_rekomendasi,
     format_pagi_ganti_tanya, format_pagi_lanjut_konfirmasi,
@@ -941,9 +942,35 @@ async def cmd_laporan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not catatan and not tambahan:
         await update.message.reply_text(T("laporan_kosong", lang))
         return
+    # Offer two view modes
     await update.message.reply_text(
-        format_ringkasan_positif(catatan, tambahan, lang), parse_mode="Markdown"
+        T("laporan_pilih_mode", lang),
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(T("laporan_mode_ringkas_label", lang), callback_data="laporan_ringkas")],
+            [InlineKeyboardButton(T("laporan_mode_lengkap_label", lang), callback_data="laporan_lengkap")],
+        ])
     )
+
+
+async def laporan_mode_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    lang = await _lang(user_id, context)
+    catatan = await get_catatan_hari_ini(user_id)
+    tambahan = await get_tambahan_malam(user_id)
+    db_user = await get_user(user_id)
+    nama = db_user.get("username", "") if db_user else ""
+
+    await query.edit_message_reply_markup(reply_markup=None)
+
+    if query.data == "laporan_ringkas":
+        text = format_laporan_ringkas(catatan, tambahan, lang)
+    else:
+        text = format_laporan_lengkap(catatan, tambahan, lang, nama)
+
+    await query.message.reply_text(text, parse_mode="Markdown")
 
 
 # ─── /tambahan / /add ────────────────────────────────────────────────────────

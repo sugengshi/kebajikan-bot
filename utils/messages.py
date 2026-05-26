@@ -150,7 +150,129 @@ def format_ringkasan_positif(catatan_list: list, tambahan_list: list, lang: str 
         return T("ringkasan_kosong", lang)
 
     lines.append("─────────────────────")
-    lines.append(T("ringkasan_penutup", lang))
+    lines.append("─────────────────────")
+    return "\n".join(lines)
+
+
+def _get_entry_header(c: dict, lang: str) -> str:
+    """Return display header for a catatan entry (works for both slot_ and standard sesi)."""
+    sesi = c.get("sesi", "")
+    k_id = c.get("kebajikan_id", 0)
+    if sesi.startswith("slot_"):
+        jam = sesi.replace("slot_", "")
+        from data.vows import ADVANCED_VOWS, SUPER_ADVANCED_VOWS
+        vow_text = ADVANCED_VOWS.get(k_id) or SUPER_ADVANCED_VOWS.get(k_id)
+        if vow_text:
+            en_t, id_t = vow_text
+            short = (id_t if lang == "id" else en_t)[:55]
+            if len(id_t if lang == "id" else en_t) > 55:
+                short += "..."
+            return f"*{jam}* — 📿 *#{k_id}* _{short}_"
+        return f"*{jam}* — 📿 *#{k_id}*"
+    else:
+        k = get_kebajikan_by_id(k_id)
+        nama = k["nama"] if k else "Kebajikan"
+        if lang == "en" and k:
+            nama = k.get("nama_en", nama)
+        emoji = k["emoji"] if k else "•"
+        sesi_label = _sesi_label(sesi, lang)
+        return f"*{sesi_label}* — {emoji} _{nama}_"
+
+
+def format_laporan_ringkas(catatan_list: list, tambahan_list: list, lang: str = "id") -> str:
+    """Show positives and plans only — for all filled slots."""
+    from datetime import datetime
+    import pytz
+    now = datetime.now(pytz.timezone("Asia/Jakarta")).strftime("%d %B %Y")
+
+    if lang == "id":
+        title = f"📋 *Ringkasan Hari Ini*\n_{now}_\n\n─────────────────────\n"
+        penutup = "_Ketuk /report lagi untuk melihat semua entri lengkap._ 🙏"
+    else:
+        title = f"📋 *Today's Summary*\n_{now}_\n\n─────────────────────\n"
+        penutup = "_Tap /report again to see all entries in full._ 🙏"
+
+    lines = [title]
+    ada_isi = False
+
+    for c in catatan_list:
+        positif = c.get("catatan_positif", "").strip()
+        rencana = c.get("rencana_kedepan", "").strip()
+        if not positif and not rencana:
+            continue
+        ada_isi = True
+        header = _get_entry_header(c, lang)
+        lines.append(header)
+        if positif:
+            plus_label = "✅" if lang == "en" else "✅"
+            lines.append(f"{plus_label} {positif}")
+        if rencana:
+            todo_label = "🌱 *Plan:* " if lang == "en" else "🌱 *Rencana:* "
+            lines.append(f"{todo_label}{rencana}")
+        lines.append("")
+
+    if tambahan_list:
+        ada_isi = True
+        label = "🌙 *Additional Good Deeds:*" if lang == "en" else "🌙 *Tambahan Perbuatan Baik:*"
+        lines.append(label)
+        for t in tambahan_list:
+            lines.append(f"✅ {t}")
+        lines.append("")
+
+    if not ada_isi:
+        return format_ringkasan_positif([], [], lang)
+
+    lines.append("─────────────────────")
+    lines.append(penutup)
+    return "\n".join(lines)
+
+
+def format_laporan_lengkap(catatan_list: list, tambahan_list: list, lang: str = "id", user_nama: str = "") -> str:
+    """Show every field for every filled slot — positif, negatif, rencana."""
+    from datetime import datetime
+    import pytz
+    now = datetime.now(pytz.timezone("Asia/Jakarta")).strftime("%d %B %Y")
+    sapaan = f" — {user_nama}" if user_nama else ""
+
+    if lang == "id":
+        title = f"📄 *Laporan Lengkap{sapaan}*\n_{now}_\n\n═════════════════════\n"
+        penutup = "_Ini adalah semua entri yang sudah diisi hari ini._ 🙏"
+    else:
+        title = f"📄 *Full Report{sapaan}*\n_{now}_\n\n═════════════════════\n"
+        penutup = "_These are all entries filled in today._ 🙏"
+
+    lines = [title]
+
+    if not catatan_list and not tambahan_list:
+        no_entry = "Belum ada entri hari ini." if lang == "id" else "No entries yet today."
+        return title + no_entry
+
+    pos_label  = T("arsip_positif_label", lang)
+    neg_label  = T("arsip_negatif_label", lang)
+    plan_label = T("arsip_rencana_label", lang)
+
+    for c in catatan_list:
+        header = _get_entry_header(c, lang)
+        lines.append(header)
+        positif = c.get("catatan_positif", "").strip()
+        negatif = c.get("catatan_negatif", "").strip()
+        rencana = c.get("rencana_kedepan", "").strip()
+        if positif:
+            lines.append(pos_label + positif)
+        if negatif and negatif.lower() not in ("tidak ada", "none", "-", ""):
+            lines.append(neg_label + negatif)
+        if rencana:
+            lines.append(plan_label + rencana)
+        lines.append("─────────────────────")
+
+    if tambahan_list:
+        add_label = T("arsip_tambahan_label", lang)
+        lines.append(add_label)
+        for t in tambahan_list:
+            lines.append(f"✅ {t}")
+        lines.append("─────────────────────")
+
+    lines.append(penutup)
     return "\n".join(lines)
 
 
