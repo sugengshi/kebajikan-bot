@@ -1427,4 +1427,6 @@ def build_conversation_handler():
         },
         fallbacks=[CommandHandler("start", start)],
         allow_reentry=True,
+        per_message=False,
+        per_chat=True,
     )

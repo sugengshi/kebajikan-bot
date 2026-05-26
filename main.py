@@ -101,25 +101,22 @@ def main():
         .build()
     )
 
-    # Conversation handler (onboarding + refleksi + ganti + tambahan)
+    # Conversation handler — handles all multi-step flows
     app.add_handler(build_conversation_handler())
 
-    # Standalone commands
+    # Standalone commands (group 0)
     app.add_handler(CommandHandler("kebajikan", cmd_kebajikan))
-    app.add_handler(CommandHandler("laporan", cmd_laporan))
-    app.add_handler(CommandHandler("level",    cmd_level))
-    app.add_handler(CommandHandler("language", cmd_language))
-    app.add_handler(CommandHandler("kebajikan",cmd_kebajikan))
-    app.add_handler(CommandHandler("virtue",   cmd_kebajikan))
-    app.add_handler(CommandHandler("laporan",  cmd_laporan))
-    app.add_handler(CommandHandler("report",   cmd_laporan))
-    app.add_handler(CommandHandler("help",     cmd_help))
-    app.add_handler(CommandHandler("bantuan",  cmd_help))
+    app.add_handler(CommandHandler("virtue",    cmd_kebajikan))
+    app.add_handler(CommandHandler("laporan",   cmd_laporan))
+    app.add_handler(CommandHandler("report",    cmd_laporan))
+    app.add_handler(CommandHandler("level",     cmd_level))
+    app.add_handler(CommandHandler("language",  cmd_language))
+    app.add_handler(CommandHandler("help",      cmd_help))
+    app.add_handler(CommandHandler("bantuan",   cmd_help))
 
-    # Standalone handlers that work even mid-conversation (group 1)
-    from handlers.conversation import cmd_setjam, cmd_help, cmd_kebajikan, cmd_laporan, cmd_level, cmd_language
-    app.add_handler(CommandHandler("setjam",  cmd_setjam),  group=1)
-    app.add_handler(CommandHandler("settime", cmd_setjam),  group=1)
+    # Setjam also works mid-conversation (group 1)
+    app.add_handler(CommandHandler("setjam",  cmd_setjam), group=1)
+    app.add_handler(CommandHandler("settime", cmd_setjam), group=1)
 
     # Callbacks
     app.add_handler(CallbackQueryHandler(callback_pagi_ganti, pattern="^pagi_ganti_"))
