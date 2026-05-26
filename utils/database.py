@@ -125,6 +125,21 @@ async def init_db():
         except Exception:
             pass  # already exists
 
+        # Ensure catatan_harian has all required columns
+        for col, default in [
+            ("sesi",            "'pagi'"),
+            ("kebajikan_id",    "0"),
+            ("catatan_positif", "''"),
+            ("catatan_negatif", "''"),
+            ("rencana_kedepan", "''"),
+        ]:
+            try:
+                await conn.execute(
+                    f"ALTER TABLE catatan_harian ADD COLUMN IF NOT EXISTS {col} TEXT DEFAULT {default}"
+                )
+            except Exception:
+                pass
+
         for col, default in [
             ("bahasa",        "'id'"),
             ("timezone",      "'Asia/Jakarta'"),
