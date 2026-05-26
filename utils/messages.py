@@ -178,9 +178,10 @@ def _get_entry_header(c: dict, lang: str, hide_sesi_label: bool = False) -> str:
             short = (id_t if lang == "id" else en_t)[:55]
             if len(id_t if lang == "id" else en_t) > 55:
                 short += "..."
-            # Show time from sesi if it contains time info, else just vow
-            if ":" in sesi:
-                return f"*{sesi}* — 📿 *#{k_id}* _{short}_"
+            # Show time from sesi if it's a slot_, otherwise no time prefix
+            if sesi.startswith("slot_"):
+                jam = sesi.replace("slot_", "")
+                return f"*{jam}* — 📿 *#{k_id}* _{short}_"
             return f"📿 *#{k_id}* _{short}_"
         # Standard kebajikan (id 1-10)
         k = get_kebajikan_by_id(k_id)
@@ -194,6 +195,15 @@ def _get_entry_header(c: dict, lang: str, hide_sesi_label: bool = False) -> str:
             return f"{emoji} *{nama}*"
         sesi_label = _sesi_label(sesi, lang)
         return f"*{sesi_label}* — {emoji} _{nama}_"
+
+
+def _sort_key(c: dict) -> str:
+    """Return sortable time string for a catatan entry."""
+    sesi = c.get("sesi", "")
+    if sesi.startswith("slot_"):
+        return sesi.replace("slot_", "")  # "07:00", "09:30", etc.
+    # Map standard sesi to approximate times for sorting
+    return {"pagi": "06:00", "siang": "11:00", "sore": "17:00"}.get(sesi, "99:99")
 
 
 def _is_advanced_list(catatan_list: list) -> bool:
@@ -215,6 +225,7 @@ def format_laporan_ringkas(catatan_list: list, tambahan_list: list, lang: str = 
         penutup = "_Tap /report again to see all entries in full._ 🙏"
 
     lines = [title]
+    catatan_list = sorted(catatan_list, key=_sort_key)
     ada_isi = False
 
     for c in catatan_list:
@@ -273,6 +284,7 @@ def format_laporan_lengkap(catatan_list: list, tambahan_list: list, lang: str = 
     neg_label  = T("arsip_negatif_label", lang)
     plan_label = T("arsip_rencana_label", lang)
 
+    catatan_list = sorted(catatan_list, key=_sort_key)
     hide = _is_advanced_list(catatan_list)
     for c in catatan_list:
         header = _get_entry_header(c, lang, hide_sesi_label=hide)
