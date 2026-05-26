@@ -511,6 +511,10 @@ STRINGS = {
         "id": "Gunakan /{cmd_ganti} untuk memilih kebajikan fokus.",
         "en": "Use /{cmd_ganti} to choose a virtue focus.",
     },
+    "sumpah_mulai_refleksi_label": {
+        "id": "✍️ Tulis refleksi sumpah ini",
+        "en": "✍️ Reflect on this vow",
+    },
     "sumpah_renungan": {
         "id": "_Renungkan sumpah ini dalam setiap tindakan, perkataan, dan pikiran Anda hari ini._ 🙏",
         "en": "_Contemplate this vow in every action, word, and thought today._ 🙏",

@@ -422,6 +422,67 @@ async def cmd_refleksi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return await _tampilkan_pilihan_refleksi(update.message, context, lang, fokus, filled)
 
 
+async def reflect_vow_from_scheduler_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User tapped 'Reflect' on a scheduler vow message — start Q1 directly."""
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    lang = await _lang(user_id, context)
+
+    # Parse: reflect_vow_{slot_index}_{jam_no_colon}
+    parts = query.data.replace("reflect_vow_", "").split("_")
+    slot_index = int(parts[0])
+    jam_raw = parts[1] if len(parts) > 1 else "0700"
+    jam = jam_raw[:2] + ":" + jam_raw[2:]  # "0700" → "07:00"
+
+    # Rebuild vow data from DB
+    db_user = await get_user(user_id)
+    if not db_user:
+        await query.message.reply_text(T("silakan_start", lang))
+        return ConversationHandler.END
+
+    level = db_user.get("level", "advanced")
+    from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
+                           ADVANCED_VOWS, SUPER_ADVANCED_VOWS, ADV_TIMES, SA_TIMES)
+    from datetime import date as dt_date
+    join_date_raw = db_user.get("join_date")
+    today = dt_date.today()
+    jd = join_date_raw if (join_date_raw and isinstance(join_date_raw, dt_date)) else today
+    day_number = (today - jd).days + 1
+    vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
+    times = ADV_TIMES if level == "advanced" else SA_TIMES
+    vow_dict = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
+
+    if slot_index >= len(vows):
+        await query.message.reply_text(T("silakan_start", lang))
+        return ConversationHandler.END
+
+    vow = vows[slot_index]
+    if isinstance(vow, list):
+        vow = vow[0]
+
+    en, id_ = vow_dict.get(vow, ("?", "?"))
+    label_key = "sumpah_label_advanced" if level == "advanced" else "sumpah_label_super"
+    label = T(label_key, lang)
+
+    # Store context for Q1→Q2→Q3 flow
+    context.user_data["lang"] = lang
+    context.user_data["sumpah_vow_num"] = vow
+    context.user_data["sumpah_vow_en"] = en
+    context.user_data["sumpah_vow_id"] = id_
+    context.user_data["sumpah_vow_jam"] = jam
+    context.user_data["sumpah_vow_label"] = label
+    context.user_data["sumpah_vows_today"] = vows
+    context.user_data["sumpah_times_today"] = times
+    context.user_data["sumpah_level"] = level
+
+    await query.message.reply_text(
+        T("sumpah_refleksi_positif", lang, label=label, jam=jam, vow=vow, en=en, id_=id_),
+        parse_mode="Markdown"
+    )
+    return SUMPAH_REFLEKSI_POSITIF
+
+
 async def _tampilkan_pilihan_sumpah(message, context, lang: str, db_user: dict):
     """For Advanced/Super Advanced: show today's vow schedule as selectable buttons."""
     from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
@@ -1252,6 +1313,7 @@ def build_conversation_handler():
             CommandHandler("start",    start),
             CommandHandler("refleksi", cmd_refleksi),
             CommandHandler("reflect",  cmd_refleksi),
+            CallbackQueryHandler(reflect_vow_from_scheduler_cb, pattern="^reflect_vow_"),
             CommandHandler("ganti",    cmd_ganti),
             CommandHandler("change",   cmd_ganti),
             CommandHandler("tambahan", cmd_tambahan),

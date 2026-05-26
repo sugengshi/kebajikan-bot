@@ -187,10 +187,20 @@ async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict, vo
     # Format message — handle the 264&265 pair on SA day 44 last slot
     if isinstance(vow, list):
         text = format_vow_pair_message(vow, vow_dict, label)
+        vow_num = vow[0]
     else:
         text = format_vow_message(vow, vow_dict, label)
+        vow_num = vow
 
-    await bot.send_message(chat_id=user_id, text=text, parse_mode="Markdown")
+    # Add inline button so user can tap to start reflection directly
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    slot_index_str = str(slot_index)
+    reflect_label = T("sumpah_mulai_refleksi_label", lang)
+    kb = InlineKeyboardMarkup([[
+        InlineKeyboardButton(reflect_label, callback_data=f"reflect_vow_{slot_index_str}_{jam.replace(':','')}")
+    ]])
+
+    await bot.send_message(chat_id=user_id, text=text, parse_mode="Markdown", reply_markup=kb)
 
 
 # ─── INDIVIDUAL SEND FUNCTIONS ───────────────────────────────────────────────
