@@ -302,7 +302,7 @@ async def get_tambahan_malam(user_id: int) -> list:
         rows = await conn.fetch("""
             SELECT catatan FROM tambahan_malam
             WHERE user_id = $1 AND tanggal = $2
-            ORDER BY sesi
+            ORDER BY created_at
         """, user_id, tanggal)
         return [r["catatan"] for r in rows]
 
