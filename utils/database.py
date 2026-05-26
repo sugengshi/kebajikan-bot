@@ -92,19 +92,31 @@ async def init_db():
             )
         """)
         # Migrations — add new columns to existing tables safely
-        # Fix unique constraint to allow multiple vow slots per day
+        # Ensure correct 4-column unique constraint on catatan_harian
         try:
+            # Drop any old 3-column constraint
             await conn.execute("""
                 ALTER TABLE catatan_harian
                 DROP CONSTRAINT IF EXISTS catatan_harian_user_id_tanggal_sesi_key
             """)
+        except Exception:
+            pass
+        try:
             await conn.execute("""
                 ALTER TABLE catatan_harian
-                ADD CONSTRAINT catatan_harian_user_tanggal_sesi_vow_key
+                DROP CONSTRAINT IF EXISTS catatan_harian_pkey
+            """)
+        except Exception:
+            pass
+        try:
+            # Add correct 4-column constraint
+            await conn.execute("""
+                ALTER TABLE catatan_harian
+                ADD CONSTRAINT IF NOT EXISTS catatan_harian_user_tanggal_sesi_vow_key
                 UNIQUE (user_id, tanggal, sesi, kebajikan_id)
             """)
         except Exception:
-            pass  # constraint may already be correct
+            pass  # already exists
 
         for col, default in [
             ("bahasa",        "'id'"),
@@ -209,16 +221,18 @@ async def get_all_users() -> list:
 
 async def save_catatan(user_id: int, sesi: str, kebajikan_id: int,
                        positif: str, negatif: str, rencana: str):
+    import logging
+    _log = logging.getLogger(__name__)
     tanggal = _today()
+    _log.info(f"save_catatan: user={user_id} sesi={sesi!r} vow={kebajikan_id} tanggal={tanggal}")
     async with _pool_conn() as conn:
         await conn.execute("""
             INSERT INTO catatan_harian
                 (user_id, tanggal, sesi, kebajikan_id,
                  catatan_positif, catatan_negatif, rencana_kedepan)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (user_id, tanggal, sesi)
+            ON CONFLICT (user_id, tanggal, sesi, kebajikan_id)
             DO UPDATE SET
-                kebajikan_id    = EXCLUDED.kebajikan_id,
                 catatan_positif = EXCLUDED.catatan_positif,
                 catatan_negatif = EXCLUDED.catatan_negatif,
                 rencana_kedepan = EXCLUDED.rencana_kedepan
