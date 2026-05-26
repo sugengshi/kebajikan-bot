@@ -963,12 +963,25 @@ async def laporan_mode_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db_user = await get_user(user_id)
     nama = db_user.get("username", "") if db_user else ""
 
+    # Build vow-time map so legacy pagi/siang/sore entries show correct time
+    from utils.messages import build_vow_time_map
+    from datetime import date as dt_date
+    vow_time_map = {}
+    if db_user:
+        level = db_user.get("level", "pemula")
+        if level in ("advanced", "super_advanced"):
+            join_date_raw = db_user.get("join_date")
+            today = dt_date.today()
+            jd = join_date_raw if (join_date_raw and isinstance(join_date_raw, dt_date)) else today
+            day_number = (today - jd).days + 1
+            vow_time_map = build_vow_time_map(level, day_number)
+
     await query.edit_message_reply_markup(reply_markup=None)
 
     if query.data == "laporan_ringkas":
-        text = format_laporan_ringkas(catatan, tambahan, lang)
+        text = format_laporan_ringkas(catatan, tambahan, lang, vow_time_map=vow_time_map)
     else:
-        text = format_laporan_lengkap(catatan, tambahan, lang, nama)
+        text = format_laporan_lengkap(catatan, tambahan, lang, nama, vow_time_map=vow_time_map)
 
     await query.message.reply_text(text, parse_mode="Markdown")
 

@@ -8,6 +8,22 @@ from data.kebajikan import KEBAJIKAN, get_kebajikan_by_id
 
 WIB = pytz.timezone("Asia/Jakarta")
 
+
+def build_vow_time_map(level: str, day_number: int) -> dict:
+    """Return {vow_id: 'HH:MM'} for today's vow schedule."""
+    from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
+                           ADV_TIMES, SA_TIMES)
+    vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
+    times = ADV_TIMES if level == "advanced" else SA_TIMES
+    result = {}
+    for t, v in zip(times, vows):
+        if isinstance(v, list):
+            for vn in v:
+                result[vn] = t
+        else:
+            result[v] = t
+    return result
+
 SESI_KEY = {
     "pagi":  "sesi_pagi_label",
     "siang": "sesi_siang_label",
@@ -154,7 +170,7 @@ def format_ringkasan_positif(catatan_list: list, tambahan_list: list, lang: str 
     return "\n".join(lines)
 
 
-def _get_entry_header(c: dict, lang: str, hide_sesi_label: bool = False) -> str:
+def _get_entry_header(c: dict, lang: str, hide_sesi_label: bool = False, vow_time_map: dict = None) -> str:
     """Return display header for a catatan entry (works for both slot_ and standard sesi)."""
     sesi = c.get("sesi", "")
     k_id = c.get("kebajikan_id", 0)
@@ -178,9 +194,14 @@ def _get_entry_header(c: dict, lang: str, hide_sesi_label: bool = False) -> str:
             short = (id_t if lang == "id" else en_t)[:55]
             if len(id_t if lang == "id" else en_t) > 55:
                 short += "..."
-            # Show time from sesi if it's a slot_, otherwise no time prefix
+            # Get time: from slot_ sesi, or from vow_time_map, or none
             if sesi.startswith("slot_"):
                 jam = sesi.replace("slot_", "")
+            elif vow_time_map and k_id in vow_time_map:
+                jam = vow_time_map[k_id]
+            else:
+                jam = None
+            if jam:
                 return f"*{jam}* — 📿 *#{k_id}* _{short}_"
             return f"📿 *#{k_id}* _{short}_"
         # Standard kebajikan (id 1-10)
@@ -211,7 +232,7 @@ def _is_advanced_list(catatan_list: list) -> bool:
     return any(c.get("sesi", "").startswith("slot_") for c in catatan_list)
 
 
-def format_laporan_ringkas(catatan_list: list, tambahan_list: list, lang: str = "id") -> str:
+def format_laporan_ringkas(catatan_list: list, tambahan_list: list, lang: str = "id", vow_time_map: dict = None) -> str:
     """Show positives and plans only — for all filled slots."""
     from datetime import datetime
     import pytz
@@ -235,7 +256,7 @@ def format_laporan_ringkas(catatan_list: list, tambahan_list: list, lang: str = 
             continue
         ada_isi = True
         hide = _is_advanced_list(catatan_list)
-        header = _get_entry_header(c, lang, hide_sesi_label=hide)
+        header = _get_entry_header(c, lang, hide_sesi_label=hide, vow_time_map=vow_time_map)
         lines.append(header)
         if positif:
             lines.append(f"✅ {positif}")
@@ -260,7 +281,7 @@ def format_laporan_ringkas(catatan_list: list, tambahan_list: list, lang: str = 
     return "\n".join(lines)
 
 
-def format_laporan_lengkap(catatan_list: list, tambahan_list: list, lang: str = "id", user_nama: str = "") -> str:
+def format_laporan_lengkap(catatan_list: list, tambahan_list: list, lang: str = "id", user_nama: str = "", vow_time_map: dict = None) -> str:
     """Show every field for every filled slot — positif, negatif, rencana."""
     from datetime import datetime
     import pytz
@@ -287,7 +308,7 @@ def format_laporan_lengkap(catatan_list: list, tambahan_list: list, lang: str = 
     catatan_list = sorted(catatan_list, key=_sort_key)
     hide = _is_advanced_list(catatan_list)
     for c in catatan_list:
-        header = _get_entry_header(c, lang, hide_sesi_label=hide)
+        header = _get_entry_header(c, lang, hide_sesi_label=hide, vow_time_map=vow_time_map)
         lines.append(header)
         positif = c.get("catatan_positif", "").strip()
         negatif = c.get("catatan_negatif", "").strip()
