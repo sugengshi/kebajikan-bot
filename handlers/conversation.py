@@ -443,17 +443,32 @@ async def _tampilkan_pilihan_sumpah(message, context, lang: str, db_user: dict):
     vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
     vow_dict = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
 
+    # Check which vow slots already have a catatan today
+    # We store vow number as kebajikan_id in save_catatan for advanced levels
+    from utils.database import get_catatan_hari_ini as _get_cat
+    catatan_today = await _get_cat(db_user.get("user_id", 0) if isinstance(db_user, dict) else 0)
+    # get user_id from message
+    try:
+        uid = message.chat.id
+        catatan_today = await _get_cat(uid)
+    except Exception:
+        catatan_today = []
+    filled_vows = {c["kebajikan_id"] for c in catatan_today}
+
     rows = []
     for i, (t, v) in enumerate(zip(times, vows)):
         if isinstance(v, list):
             nums = " & ".join(str(n) for n in v)
-            label = f"{t} — #{nums}"
+            vow_id = v[0]
+            status = "✅ " if vow_id in filled_vows else "○ "
+            label = f"{status}{t} — #{nums}"
             cb = f"sumpah_slot_{i}"
         else:
             en, id_ = vow_dict.get(v, ("?", "?"))
             text = id_ if lang == "id" else en
-            short = text[:40] + "..." if len(text) > 40 else text
-            label = f"{t} — #{v} {short}"
+            short = text[:38] + "..." if len(text) > 38 else text
+            status = "✅ " if v in filled_vows else "○ "
+            label = f"{status}{t} — #{v} {short}"
             cb = f"sumpah_slot_{i}"
         rows.append([InlineKeyboardButton(label, callback_data=cb)])
 

@@ -58,13 +58,13 @@ def init_scheduler(bot: Bot) -> AsyncIOScheduler:
 
     _scheduler.add_job(
         lambda: kirim_notifikasi_harian(bot),
-        CronTrigger(minute=0, timezone=WIB),
+        CronTrigger(minute="0,30", timezone=WIB),
         id="notifikasi_harian",
         replace_existing=True,
     )
     _scheduler.add_job(
         lambda: kirim_pengingat(bot),
-        CronTrigger(minute=5, timezone=WIB),
+        CronTrigger(minute="5,35", timezone=WIB),
         id="pengingat",
         replace_existing=True,
     )
@@ -82,7 +82,8 @@ async def kirim_notifikasi_harian(bot: Bot):
     should receive, then fans out with jitter to stay under Telegram's
     30 msg/sec limit even at large scale.
     """
-    jam_sekarang = datetime.now(WIB).strftime("%H:%M")
+    now = datetime.now(WIB)
+    jam_sekarang = now.strftime("%H:%M")
     users = await get_all_users()
     total = len(users)
 
@@ -104,9 +105,13 @@ async def _dispatch(bot: Bot, user_id: int, u: dict, jam: str):
 
         # Advanced and Super Advanced: 6 vow prompts per day at fixed times
         if level in ("advanced", "super_advanced"):
-            vow_times = ADV_TIMES if level == "advanced" else SA_TIMES
+            custom_times = u.get("vow_times", "")
+            if custom_times:
+                vow_times = custom_times.split()
+            else:
+                vow_times = ADV_TIMES if level == "advanced" else SA_TIMES
             if jam in vow_times:
-                await kirim_sumpah(bot, user_id, level, jam, u)
+                await kirim_sumpah(bot, user_id, level, jam, u, vow_times)
                 return
             # Still send 06:00 focus check, 21:00 ringkasan, 21:30 arsip
             if jam == "06:00":
@@ -136,7 +141,7 @@ async def _dispatch(bot: Bot, user_id: int, u: dict, jam: str):
         logger.error(f"Error notifikasi user {user_id} jam {jam}: {e}")
 
 
-async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict):
+async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict, vow_times: list = None):
     """Send a single vow prompt at the scheduled time for Advanced/Super Advanced."""
     from datetime import date
     import pytz
@@ -159,7 +164,9 @@ async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict):
         day_number = (today - jd).days + 1
 
     # Get slot index from time
-    times = ADV_TIMES if level == "advanced" else SA_TIMES
+    if vow_times is None:
+        vow_times = ADV_TIMES if level == "advanced" else SA_TIMES
+    times = vow_times
     if jam not in times:
         return
     slot_index = times.index(jam)
