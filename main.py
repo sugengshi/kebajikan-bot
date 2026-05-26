@@ -8,9 +8,9 @@ from telegram.ext import (
 )
 from utils.database import init_db, get_user, update_user
 from handlers.conversation import (
-    build_conversation_handler, cmd_kebajikan,
-    cmd_bantuan, cmd_laporan, cmd_level, cmd_language,
-    callback_pagi_ganti, cmd_atur_jam, cmd_setjam
+    build_conversation_handler, cmd_kebajikan, cmd_help,
+    cmd_laporan, cmd_level, cmd_language,
+    callback_pagi_ganti, cmd_setjam
 )
 from handlers.scheduler import init_scheduler
 
@@ -28,19 +28,36 @@ async def post_init(application):
 
     # Register commands so they appear when user types "/"
     from telegram import BotCommand
-    commands = [
-        BotCommand("start",     "Mulai ulang / Restart"),
-        BotCommand("help",      "Daftar perintah / Command list"),
-        BotCommand("kebajikan", "Fokus kebajikan hari ini / Today's virtue focus"),
-        BotCommand("refleksi",  "Isi refleksi / Fill reflection"),
-        BotCommand("ganti",     "Ganti fokus kebajikan / Change virtue focus"),
-        BotCommand("tambahan",  "Tambah perbuatan baik / Add good deeds"),
-        BotCommand("laporan",   "Ringkasan hari ini / Today's summary"),
-        BotCommand("level",     "Ubah level praktik / Change practice level"),
-        BotCommand("language",  "Ganti bahasa / Change language"),
-        BotCommand("setjam",    "Atur jam notifikasi / Set notification times"),
+    from telegram import BotCommandScopeDefault
+    # Indonesian commands
+    id_commands = [
+        BotCommand("start",     "Mulai ulang"),
+        BotCommand("help",      "Daftar perintah"),
+        BotCommand("kebajikan", "Fokus kebajikan hari ini"),
+        BotCommand("refleksi",  "Isi refleksi sekarang"),
+        BotCommand("ganti",     "Ganti fokus kebajikan"),
+        BotCommand("tambahan",  "Tambah perbuatan baik"),
+        BotCommand("laporan",   "Ringkasan hari ini"),
+        BotCommand("level",     "Ubah level praktik"),
+        BotCommand("language",  "Ganti bahasa"),
+        BotCommand("setjam",    "Atur jam notifikasi"),
     ]
-    await application.bot.set_my_commands(commands)
+    # English commands
+    en_commands = [
+        BotCommand("start",    "Restart"),
+        BotCommand("help",     "Command list"),
+        BotCommand("virtue",   "Today's virtue focus"),
+        BotCommand("reflect",  "Fill in reflection now"),
+        BotCommand("change",   "Change virtue focus"),
+        BotCommand("add",      "Add good deeds"),
+        BotCommand("report",   "Today's summary"),
+        BotCommand("level",    "Change practice level"),
+        BotCommand("language", "Change language"),
+        BotCommand("settime",  "Set notification times"),
+    ]
+    from telegram import BotCommandScopeDefault
+    await application.bot.set_my_commands(id_commands)
+    await application.bot.set_my_commands(en_commands, language_code="en")
     logger.info("Bot commands registered.")
     logger.info("Bot initialized successfully.")
 
@@ -89,12 +106,15 @@ def main():
 
     # Standalone commands
     app.add_handler(CommandHandler("kebajikan", cmd_kebajikan))
-    app.add_handler(CommandHandler("help", cmd_bantuan))
     app.add_handler(CommandHandler("laporan", cmd_laporan))
-    app.add_handler(CommandHandler("atur_jam", cmd_atur_jam))
-    app.add_handler(CommandHandler("setjam", cmd_setjam))
-    app.add_handler(CommandHandler("level", cmd_level))
+    app.add_handler(CommandHandler("level",    cmd_level))
     app.add_handler(CommandHandler("language", cmd_language))
+    app.add_handler(CommandHandler("kebajikan",cmd_kebajikan))
+    app.add_handler(CommandHandler("virtue",   cmd_kebajikan))
+    app.add_handler(CommandHandler("laporan",  cmd_laporan))
+    app.add_handler(CommandHandler("report",   cmd_laporan))
+    app.add_handler(CommandHandler("help",     cmd_help))
+    app.add_handler(CommandHandler("bantuan",  cmd_help))
 
     # Callbacks
     app.add_handler(CallbackQueryHandler(callback_pagi_ganti, pattern="^pagi_ganti_"))

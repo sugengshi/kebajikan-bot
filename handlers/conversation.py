@@ -17,11 +17,11 @@ from utils.database import (
 from utils.messages import (
     format_pertanyaan_refleksi, format_konfirmasi_sesi,
     format_ringkasan_positif, format_pertanyaan_tambahan_malam,
-    format_sambutan, format_sambutan_kembali, format_pilih_level,
-    format_tujuan_smart, format_smart_revisi, format_onboarding_selesai,
-    format_rekomendasi
+    format_sambutan, format_tujuan_smart, format_smart_revisi,
+    format_onboarding_selesai, format_rekomendasi,
+    format_pagi_ganti_tanya, format_pagi_lanjut_konfirmasi,
 )
-from utils.i18n import T
+from utils.i18n import T, COMMANDS, TIMEZONE_MAP, cmd
 from utils.smart_evaluator import evaluasi_smart, rekomendasikan_kebajikan
 from data.kebajikan import KEBAJIKAN, LEVEL_CONFIG
 
@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # ─── STATES ──────────────────────────────────────────────────────────────────
 (
     PILIH_BAHASA,
+    PILIH_TIMEZONE,
     PILIH_LEVEL,
     ONBOARDING_GOAL,
     ONBOARDING_GOAL_REVISI,
@@ -42,8 +43,13 @@ logger = logging.getLogger(__name__)
     UPGRADE_PASSWORD,
     PILIH_VOW_AWAL,
     PILIH_JAM_VOW,
-) = range(13)
+    SETJAM_SEQUENTIAL,
+) = range(15)
 
+SETJAM_DB_KEYS    = ["jam_fokus","jam_pagi","jam_siang","jam_sore","jam_malam","jam_ringkasan","jam_cofmed"]
+SETJAM_DEFAULTS   = ["06:00","07:00","12:00","18:00","20:00","21:00","21:30"]
+
+VOW_JAM_DEFAULTS  = ["07:00","09:30","12:00","14:30","17:00","19:30"]
 
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -51,16 +57,12 @@ def _sesi_sekarang() -> str:
     import pytz
     from datetime import datetime
     jam = datetime.now(pytz.timezone("Asia/Jakarta")).hour
-    if jam < 12:
-        return "pagi"
-    elif jam < 17:
-        return "siang"
-    else:
-        return "sore"
+    if jam < 12:   return "pagi"
+    elif jam < 17: return "siang"
+    else:          return "sore"
 
 
 async def _lang(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str:
-    """Get user language from context cache or DB."""
     if "lang" in context.user_data:
         return context.user_data["lang"]
     lang = await get_user_lang(user_id)
@@ -68,42 +70,49 @@ async def _lang(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str:
     return lang
 
 
+def _valid_time(t: str) -> bool:
+    if not re.match(r"^\d{2}:\d{2}$", t):
+        return False
+    h, m = t.split(":")
+    return 0 <= int(h) <= 23 and 0 <= int(m) <= 59
+
+
 # ─── KEYBOARDS ───────────────────────────────────────────────────────────────
 
 def kb_bahasa():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🇮🇩 Bahasa Indonesia", callback_data="lang_id")],
-        [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")],
+        [InlineKeyboardButton("🇬🇧 English",          callback_data="lang_en")],
     ])
 
+def kb_timezone():
+    keys = ["WIB","WITA","WIT","SGT","MYT","IST","AEST","GMT","CET","EST","PST"]
+    rows = [[InlineKeyboardButton(
+        f"{'Asia/Jakarta' if k=='WIB' else TIMEZONE_MAP[k]} ({k})",
+        callback_data=f"tz_{k}"
+    )] for k in keys]
+    return InlineKeyboardMarkup(rows)
 
 def kb_level(lang: str = "id"):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(T("level_pemula_label", lang),   callback_data="level_pemula")],
+        [InlineKeyboardButton(T("level_pemula_label",   lang), callback_data="level_pemula")],
         [InlineKeyboardButton(T("level_menengah_label", lang), callback_data="level_menengah")],
-        [InlineKeyboardButton(T("level_mahir_label", lang),    callback_data="level_mahir")],
+        [InlineKeyboardButton(T("level_mahir_label",    lang), callback_data="level_mahir")],
         [InlineKeyboardButton(T("level_advanced_label", lang), callback_data="level_advanced")],
-        [InlineKeyboardButton(T("level_super_label", lang),    callback_data="level_super_advanced")],
+        [InlineKeyboardButton(T("level_super_label",    lang), callback_data="level_super_advanced")],
     ])
-
 
 def kb_smart(lang: str = "id"):
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(T("smart_lanjut_label", lang),  callback_data="goal_lanjut"),
-            InlineKeyboardButton(T("smart_revisi_label", lang),  callback_data="goal_revisi"),
-        ]
-    ])
-
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton(T("smart_lanjut_label", lang), callback_data="goal_lanjut"),
+        InlineKeyboardButton(T("smart_revisi_label", lang), callback_data="goal_revisi"),
+    ]])
 
 def kb_kebajikan_konfirmasi(lang: str = "id"):
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(T("setuju_label", lang),        callback_data="kebajikan_setuju"),
-            InlineKeyboardButton(T("pilih_sendiri_label", lang), callback_data="kebajikan_sendiri"),
-        ]
-    ])
-
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton(T("setuju_label",        lang), callback_data="kebajikan_setuju"),
+        InlineKeyboardButton(T("pilih_sendiri_label", lang), callback_data="kebajikan_sendiri"),
+    ]])
 
 def kb_kebajikan_manual(level: str, dipilih: list, lang: str = "id"):
     jumlah = LEVEL_CONFIG[level]["jumlah"]
@@ -118,34 +127,30 @@ def kb_kebajikan_manual(level: str, dipilih: list, lang: str = "id"):
         rows.append([InlineKeyboardButton(T("selesai_pilih_label", lang), callback_data="selesai_pilih")])
     return InlineKeyboardMarkup(rows)
 
-
 def kb_pagi_ganti(lang: str = "id"):
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(T("pagi_ganti_ya_label", lang),    callback_data="pagi_ganti_ya"),
-            InlineKeyboardButton(T("pagi_ganti_tidak_label", lang), callback_data="pagi_ganti_tidak"),
-        ]
-    ])
-
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton(T("pagi_ganti_ya_label",    lang), callback_data="pagi_ganti_ya"),
+        InlineKeyboardButton(T("pagi_ganti_tidak_label", lang), callback_data="pagi_ganti_tidak"),
+    ]])
 
 def kb_upgrade_level(lang: str = "id"):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(T("level_pemula_label", lang),   callback_data="upgrade_pemula")],
+        [InlineKeyboardButton(T("level_pemula_label",   lang), callback_data="upgrade_pemula")],
         [InlineKeyboardButton(T("level_menengah_label", lang), callback_data="upgrade_menengah")],
-        [InlineKeyboardButton(T("level_mahir_label", lang),    callback_data="upgrade_mahir")],
+        [InlineKeyboardButton(T("level_mahir_label",    lang), callback_data="upgrade_mahir")],
         [InlineKeyboardButton(T("level_advanced_label", lang), callback_data="upgrade_advanced")],
-        [InlineKeyboardButton(T("level_super_label", lang),    callback_data="upgrade_super_advanced")],
+        [InlineKeyboardButton(T("level_super_label",    lang), callback_data="upgrade_super_advanced")],
     ])
 
+def kb_vow_jam_konfirmasi(lang: str = "id"):
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton(T("vow_konfirmasi_jam",  lang), callback_data="atur_jam_vow"),
+    ]])
 
-def kb_vow_awal_konfirmasi(lang: str = "id"):
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(T("vow_konfirmasi_ya", lang),   callback_data="konfirmasi_vow_awal"),
-            InlineKeyboardButton(T("vow_konfirmasi_ubah", lang), callback_data="ubah_vow_awal"),
-        ],
-        [InlineKeyboardButton(T("vow_konfirmasi_jam", lang), callback_data="atur_jam_vow")],
-    ])
+def kb_setjam_lewati(lang: str = "id"):
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton(T("setjam_lewati_label", lang), callback_data="setjam_lewati"),
+    ]])
 
 
 # ─── /start ──────────────────────────────────────────────────────────────────
@@ -153,12 +158,10 @@ def kb_vow_awal_konfirmasi(lang: str = "id"):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     await create_user(user.id, user.username or user.first_name)
-
-    # Always reset — clear onboarding and user data
     context.user_data.clear()
+    # Full reset
     await update_user(user.id, onboarding_selesai=0, level="pemula",
                       kebajikan_fokus="[]", tujuan_smart="", join_date=None)
-
     await update.message.reply_text(
         T("pilih_bahasa", "id"),
         parse_mode="Markdown",
@@ -167,7 +170,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return PILIH_BAHASA
 
 
-# ─── PILIH BAHASA ────────────────────────────────────────────────────────────
+# ─── LANGUAGE ────────────────────────────────────────────────────────────────
 
 async def pilih_bahasa_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -175,30 +178,24 @@ async def pilih_bahasa_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = query.data.replace("lang_", "")
     context.user_data["lang"] = lang
     await update_user(query.from_user.id, bahasa=lang)
-
     await query.edit_message_text(T("bahasa_dipilih", lang), parse_mode="Markdown")
+    # Show timezone selection
     await query.message.reply_text(
-        format_sambutan(lang),
-        parse_mode="Markdown",
-        reply_markup=kb_level(lang)
+        T("pilih_timezone", lang), parse_mode="Markdown",
+        reply_markup=kb_timezone()
     )
-    return PILIH_LEVEL
+    return PILIH_TIMEZONE
 
-
-# ─── /language ───────────────────────────────────────────────────────────────
 
 async def cmd_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await _lang(update.effective_user.id, context)
     await update.message.reply_text(
-        T("language_prompt", lang),
-        parse_mode="Markdown",
-        reply_markup=kb_bahasa()
+        T("language_prompt", lang), parse_mode="Markdown", reply_markup=kb_bahasa()
     )
     return PILIH_BAHASA
 
 
 async def ganti_bahasa_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle language change from /language command."""
     query = update.callback_query
     await query.answer()
     lang = query.data.replace("lang_", "")
@@ -208,6 +205,25 @@ async def ganti_bahasa_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
+# ─── TIMEZONE ────────────────────────────────────────────────────────────────
+
+async def pilih_timezone_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+    tz_key = query.data.replace("tz_", "")
+    tz_value = TIMEZONE_MAP.get(tz_key, "Asia/Jakarta")
+    context.user_data["timezone"] = tz_value
+    await update_user(query.from_user.id, timezone=tz_value)
+    await query.edit_message_text(
+        T("timezone_dipilih", lang, tz=f"{tz_key} ({tz_value})"), parse_mode="Markdown"
+    )
+    await query.message.reply_text(
+        format_sambutan(lang), parse_mode="Markdown", reply_markup=kb_level(lang)
+    )
+    return PILIH_LEVEL
+
+
 # ─── PILIH LEVEL ─────────────────────────────────────────────────────────────
 
 async def pilih_level_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -215,20 +231,17 @@ async def pilih_level_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     level = query.data.replace("level_", "")
     context.user_data["level"] = level
-    context.user_data["upgrade_target"] = level  # needed for vow flow
+    context.user_data["upgrade_target"] = level
     lang = await _lang(query.from_user.id, context)
     cfg = LEVEL_CONFIG.get(level, {})
-
-    label_key = f"level_{level}_label"
     from utils.i18n import STRINGS
+    label_key = f"level_{level}_label"
     label = T(label_key, lang) if label_key in STRINGS else cfg.get("label", level)
 
     await query.edit_message_text(
         T("level_dipilih", lang, label=label, desc=cfg.get("deskripsi", "")),
         parse_mode="Markdown"
     )
-
-    # Advanced / Super Advanced: skip SMART goal, go to password
     if level in ("advanced", "super_advanced"):
         label_key2 = "level_advanced_label" if level == "advanced" else "level_super_label"
         await query.message.reply_text(
@@ -237,7 +250,6 @@ async def pilih_level_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return UPGRADE_PASSWORD
 
-    # Standard levels: proceed with SMART goal
     await query.message.reply_text(format_tujuan_smart(lang), parse_mode="Markdown")
     return ONBOARDING_GOAL
 
@@ -246,14 +258,10 @@ async def pilih_level_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def terima_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await _lang(update.effective_user.id, context)
-    teks_goal = update.message.text
-    context.user_data["goal"] = teks_goal
-    hasil = evaluasi_smart(teks_goal)
-    await update.message.reply_text(
-        hasil["feedback"],
-        parse_mode="Markdown",
-        reply_markup=kb_smart(lang)
-    )
+    context.user_data["goal"] = update.message.text
+    hasil = evaluasi_smart(update.message.text)
+    await update.message.reply_text(hasil["feedback"], parse_mode="Markdown",
+                                    reply_markup=kb_smart(lang))
     return ONBOARDING_GOAL_REVISI
 
 
@@ -279,24 +287,16 @@ async def _tampilkan_rekomendasi(message, context, lang: str):
     rekomendasi = rekomendasikan_kebajikan(goal)
     context.user_data["rekomendasi"] = rekomendasi
     level = context.user_data.get("level", "pemula")
-    cfg = LEVEL_CONFIG.get(level, {})
-
-    if level == "pemula":
-        dipilih = [rekomendasi["utama"]]
-    else:
-        dipilih = rekomendasi["semua"]
-
+    dipilih = [rekomendasi["utama"]] if level == "pemula" else rekomendasi["semua"]
     context.user_data["kebajikan_dipilih"] = dipilih
-
     await message.reply_text(
         format_rekomendasi(level, rekomendasi["alasan"], rekomendasi["alasan"], lang),
-        parse_mode="Markdown",
-        reply_markup=kb_kebajikan_konfirmasi(lang)
+        parse_mode="Markdown", reply_markup=kb_kebajikan_konfirmasi(lang)
     )
     return ONBOARDING_KONFIRMASI_KEBAJIKAN
 
 
-# ─── KONFIRMASI KEBAJIKAN ────────────────────────────────────────────────────
+# ─── KEBAJIKAN SELECTION ─────────────────────────────────────────────────────
 
 async def kebajikan_setuju_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -315,8 +315,7 @@ async def kebajikan_sendiri_cb(update: Update, context: ContextTypes.DEFAULT_TYP
     jumlah = LEVEL_CONFIG[level]["jumlah"]
     context.user_data["kebajikan_dipilih"] = []
     await query.message.reply_text(
-        T("ganti_judul", lang, jumlah=jumlah),
-        parse_mode="Markdown",
+        T("ganti_judul", lang, jumlah=jumlah), parse_mode="Markdown",
         reply_markup=kb_kebajikan_manual(level, [], lang)
     )
     return GANTI_PILIH
@@ -330,7 +329,7 @@ async def pilih_kebajikan_cb(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if query.data == "selesai_pilih":
         dipilih = context.user_data.get("kebajikan_dipilih", [])
         if not dipilih:
-            await query.answer("Pilih minimal 1!", show_alert=True)
+            await query.answer(T("pilih_minimal", lang), show_alert=True)
             return GANTI_PILIH
         return await _simpan_dan_selesai(query, context, lang)
 
@@ -348,10 +347,8 @@ async def pilih_kebajikan_cb(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return GANTI_PILIH
 
     context.user_data["kebajikan_dipilih"] = dipilih
-
     if len(dipilih) == jumlah:
         return await _simpan_dan_selesai(query, context, lang)
-
     await query.edit_message_reply_markup(
         reply_markup=kb_kebajikan_manual(level, dipilih, lang)
     )
@@ -363,16 +360,14 @@ async def _simpan_dan_selesai(query, context, lang: str):
     level = context.user_data.get("level", "pemula")
     dipilih = context.user_data.get("kebajikan_dipilih", [])
     goal = context.user_data.get("goal", "")
-
     if level == "mahir":
         dipilih = list(range(1, 11))
-
-    await update_user(user_id, level=level, kebajikan_fokus=dipilih, tujuan_smart=goal, onboarding_selesai=1)
-
+    tz = context.user_data.get("timezone", "Asia/Jakarta")
+    await update_user(user_id, level=level, kebajikan_fokus=dipilih,
+                      tujuan_smart=goal, onboarding_selesai=1, timezone=tz)
     nama = query.from_user.first_name
     await query.message.reply_text(
-        format_onboarding_selesai(nama, dipilih, lang),
-        parse_mode="Markdown"
+        format_onboarding_selesai(nama, dipilih, lang, tz), parse_mode="Markdown"
     )
     context.user_data.clear()
     return ConversationHandler.END
@@ -383,24 +378,20 @@ async def _simpan_dan_selesai(query, context, lang: str):
 async def cmd_refleksi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db_user = await get_user(user_id)
-    lang = db_user.get("bahasa", "id") if db_user else "id"
-    context.user_data["lang"] = lang
-
     if not db_user or not db_user.get("onboarding_selesai"):
-        await update.message.reply_text("Silakan mulai dengan /start.")
+        await update.message.reply_text(T("silakan_start", "id"))
         return ConversationHandler.END
-
+    lang = db_user.get("bahasa", "id")
+    context.user_data["lang"] = lang
     fokus = db_user.get("kebajikan_fokus", [])
     if not fokus:
         await update.message.reply_text(T("kebajikan_belum_ada", lang))
         return ConversationHandler.END
-
     k_id = fokus[0]
     sesi = _sesi_sekarang()
     await set_pending(user_id, sesi, k_id)
     await update.message.reply_text(
-        format_pertanyaan_refleksi(sesi, k_id, "positif", lang),
-        parse_mode="Markdown"
+        format_pertanyaan_refleksi(sesi, k_id, "positif", lang), parse_mode="Markdown"
     )
     return REFLEKSI_POSITIF
 
@@ -411,13 +402,11 @@ async def terima_refleksi_positif(update: Update, context: ContextTypes.DEFAULT_
     pending = await get_pending(user_id)
     if not pending:
         return ConversationHandler.END
-
     k_id = pending["kebajikan_id"]
     sesi = pending["sesi"]
     await set_pending(user_id, sesi, k_id, step="negatif", temp_positif=update.message.text)
     await update.message.reply_text(
-        format_pertanyaan_refleksi(sesi, k_id, "negatif", lang),
-        parse_mode="Markdown"
+        format_pertanyaan_refleksi(sesi, k_id, "negatif", lang), parse_mode="Markdown"
     )
     return REFLEKSI_NEGATIF
 
@@ -428,15 +417,13 @@ async def terima_refleksi_negatif(update: Update, context: ContextTypes.DEFAULT_
     pending = await get_pending(user_id)
     if not pending:
         return ConversationHandler.END
-
     k_id = pending["kebajikan_id"]
     sesi = pending["sesi"]
     await set_pending(user_id, sesi, k_id, step="rencana",
                       temp_positif=pending.get("temp_positif", ""),
                       temp_negatif=update.message.text)
     await update.message.reply_text(
-        format_pertanyaan_refleksi(sesi, k_id, "rencana", lang),
-        parse_mode="Markdown"
+        format_pertanyaan_refleksi(sesi, k_id, "rencana", lang), parse_mode="Markdown"
     )
     return REFLEKSI_RENCANA
 
@@ -447,61 +434,53 @@ async def terima_refleksi_rencana(update: Update, context: ContextTypes.DEFAULT_
     pending = await get_pending(user_id)
     if not pending:
         return ConversationHandler.END
-
     positif = pending.get("temp_positif", "")
     negatif = pending.get("temp_negatif", "")
     rencana = update.message.text
     k_id = pending["kebajikan_id"]
     sesi = pending["sesi"]
-
     await save_catatan(user_id, sesi, k_id, positif, negatif, rencana)
     await clear_pending(user_id)
     await update.message.reply_text(
-        format_konfirmasi_sesi(positif, negatif, rencana, k_id, lang),
-        parse_mode="Markdown"
+        format_konfirmasi_sesi(positif, negatif, rencana, k_id, lang), parse_mode="Markdown"
     )
     return ConversationHandler.END
 
 
-# ─── /ganti ──────────────────────────────────────────────────────────────────
+# ─── /ganti / /change ────────────────────────────────────────────────────────
 
 async def cmd_ganti(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db_user = await get_user(user_id)
     if not db_user:
-        await update.message.reply_text("Silakan mulai dengan /start.")
+        await update.message.reply_text(T("silakan_start", "id"))
         return ConversationHandler.END
-
     lang = db_user.get("bahasa", "id")
     context.user_data["lang"] = lang
     level = db_user.get("level", "pemula")
     jumlah = LEVEL_CONFIG[level]["jumlah"]
     context.user_data["level"] = level
     context.user_data["kebajikan_dipilih"] = []
-
     await update.message.reply_text(
-        T("ganti_judul", lang, jumlah=jumlah),
-        parse_mode="Markdown",
+        T("ganti_judul", lang, jumlah=jumlah), parse_mode="Markdown",
         reply_markup=kb_kebajikan_manual(level, [], lang)
     )
     return GANTI_PILIH
 
 
-# ─── /kebajikan ──────────────────────────────────────────────────────────────
+# ─── /kebajikan / /virtue ────────────────────────────────────────────────────
 
 async def cmd_kebajikan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db_user = await get_user(user_id)
     if not db_user or not db_user.get("onboarding_selesai"):
-        await update.message.reply_text("Silakan mulai dengan /start.")
+        await update.message.reply_text(T("silakan_start", "id"))
         return
-
     lang = db_user.get("bahasa", "id")
     fokus = db_user.get("kebajikan_fokus", [])
     if not fokus:
         await update.message.reply_text(T("kebajikan_belum_ada", lang))
         return
-
     tujuan = db_user.get("tujuan_smart", "-") or "-"
     lines = [T("kebajikan_fokus_judul", lang, tujuan=tujuan[:100])]
     for i, k_id in enumerate(fokus):
@@ -510,38 +489,33 @@ async def cmd_kebajikan(update: Update, context: ContextTypes.DEFAULT_TYPE):
             label = T("kebajikan_utama_label", lang) if i == 0 else T("kebajikan_pendukung_label", lang)
             lines.append(f"{k['emoji']} *{k['nama']}* _{label}_")
             lines.append(f"_{k['pertanyaan_asosiasi']}_\n")
-
     await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
 
-# ─── /laporan ────────────────────────────────────────────────────────────────
+# ─── /laporan / /report ──────────────────────────────────────────────────────
 
 async def cmd_laporan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = await _lang(user_id, context)
     catatan = await get_catatan_hari_ini(user_id)
     tambahan = await get_tambahan_malam(user_id)
-
     if not catatan and not tambahan:
         await update.message.reply_text(T("laporan_kosong", lang))
         return
-
     await update.message.reply_text(
-        format_ringkasan_positif(catatan, tambahan, lang),
-        parse_mode="Markdown"
+        format_ringkasan_positif(catatan, tambahan, lang), parse_mode="Markdown"
     )
 
 
-# ─── /tambahan ───────────────────────────────────────────────────────────────
+# ─── /tambahan / /add ────────────────────────────────────────────────────────
 
 async def cmd_tambahan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await _lang(update.effective_user.id, context)
     await update.message.reply_text(
-        format_pertanyaan_tambahan_malam(lang),
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton(T("tambahan_tidak_ada_label", lang), callback_data="tidak_ada_tambahan")]
-        ])
+        format_pertanyaan_tambahan_malam(lang), parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton(T("tambahan_tidak_ada_label", lang), callback_data="tidak_ada_tambahan")
+        ]])
     )
     return TAMBAHAN_MALAM_INPUT
 
@@ -562,11 +536,11 @@ async def tidak_ada_tambahan_cb(update: Update, context: ContextTypes.DEFAULT_TY
     return ConversationHandler.END
 
 
-# ─── /bantuan ────────────────────────────────────────────────────────────────
+# ─── /help ───────────────────────────────────────────────────────────────────
 
-async def cmd_bantuan(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await _lang(update.effective_user.id, context)
-    await update.message.reply_text(T("bantuan", lang), parse_mode="Markdown")
+    await update.message.reply_text(T("help", lang), parse_mode="Markdown")
 
 
 # ─── /level ──────────────────────────────────────────────────────────────────
@@ -575,15 +549,13 @@ async def cmd_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db_user = await get_user(user_id)
     if not db_user:
-        await update.message.reply_text("Silakan mulai dengan /start.")
+        await update.message.reply_text(T("silakan_start", "id"))
         return ConversationHandler.END
-
     lang = db_user.get("bahasa", "id")
     context.user_data["lang"] = lang
     current = db_user.get("level", "pemula")
     await update.message.reply_text(
-        T("ubah_level_judul", lang, level=current),
-        parse_mode="Markdown",
+        T("ubah_level_judul", lang, level=current), parse_mode="Markdown",
         reply_markup=kb_upgrade_level(lang)
     )
     return UPGRADE_PASSWORD
@@ -595,16 +567,12 @@ async def upgrade_level_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await _lang(query.from_user.id, context)
     target = query.data.replace("upgrade_", "")
     context.user_data["upgrade_target"] = target
-
     if target in ("pemula", "menengah", "mahir"):
         await _apply_level_upgrade(query, context, target)
         return ConversationHandler.END
-
     label_key = "level_advanced_label" if target == "advanced" else "level_super_label"
-    label = T(label_key, lang)
     await query.edit_message_text(
-        T("password_prompt", lang, label=label),
-        parse_mode="Markdown"
+        T("password_prompt", lang, label=T(label_key, lang)), parse_mode="Markdown"
     )
     return UPGRADE_PASSWORD
 
@@ -613,19 +581,15 @@ async def terima_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await _lang(update.effective_user.id, context)
     target = context.user_data.get("upgrade_target", "")
     entered = update.message.text.strip()
-
     env_key = "PASS_ADVANCED" if target == "advanced" else "PASS_SUPER"
     correct = os.environ.get(env_key, "")
-
     if not correct:
         await update.message.reply_text(T("password_belum_dikonfigurasi", lang))
         return ConversationHandler.END
-
     if entered != correct:
         await update.message.reply_text(T("password_salah", lang))
         context.user_data.clear()
         return ConversationHandler.END
-
     return await _tanya_vow_awal(update.message, context, target, lang)
 
 
@@ -636,27 +600,14 @@ async def _tanya_vow_awal(message, context, target, lang):
     return PILIH_VOW_AWAL
 
 
-async def _apply_level_upgrade_direct(user_id: int, context, target: str, join_date):
-    """Apply level upgrade to DB without sending any message."""
-    update_kwargs = {"level": target}
-    if target in ("advanced", "super_advanced"):
-        update_kwargs["join_date"] = join_date if join_date else date.today()
-        update_kwargs["kebajikan_fokus"] = list(range(1, 11))
-    db_user = await get_user(user_id)
-    if db_user and not db_user.get("onboarding_selesai"):
-        update_kwargs["onboarding_selesai"] = 1
-    await update_user(user_id, **update_kwargs)
-
-
 def _format_vow_schedule(target: str, day_number: int, lang: str) -> str:
-    """Format the 6-vow schedule for a given day for display."""
     from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
                            ADVANCED_VOWS, SUPER_ADVANCED_VOWS, ADV_TIMES, SA_TIMES)
     times = ADV_TIMES if target == "advanced" else SA_TIMES
     vows = get_adv_vows_for_day(day_number) if target == "advanced" else get_sa_vows_for_day(day_number)
     vow_dict = ADVANCED_VOWS if target == "advanced" else SUPER_ADVANCED_VOWS
     lines = []
-    for i, (t, v) in enumerate(zip(times, vows)):
+    for t, v in zip(times, vows):
         if isinstance(v, list):
             nums = " & ".join(f"#{n}" for n in v)
             lines.append(f"{t} — {nums}")
@@ -668,6 +619,17 @@ def _format_vow_schedule(target: str, day_number: int, lang: str) -> str:
     return "\n".join(lines)
 
 
+async def _apply_level_upgrade_direct(user_id: int, context, target: str, join_date):
+    update_kwargs = {"level": target}
+    if target in ("advanced", "super_advanced"):
+        update_kwargs["join_date"] = join_date if join_date else date.today()
+        update_kwargs["kebajikan_fokus"] = list(range(1, 11))
+    db_user = await get_user(user_id)
+    if db_user and not db_user.get("onboarding_selesai"):
+        update_kwargs["onboarding_selesai"] = 1
+    await update_user(user_id, **update_kwargs)
+
+
 async def terima_vow_awal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from data.vows import adv_vow_to_day, sa_vow_to_day, day_to_start_date
     user_id = update.effective_user.id
@@ -675,14 +637,10 @@ async def terima_vow_awal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target = context.user_data.get("upgrade_target", "")
     max_vow = context.user_data.get("upgrade_max_vow", 0)
 
-    logger.info(f"terima_vow_awal: user={user_id} target={target!r} max_vow={max_vow} text={update.message.text!r}")
+    logger.info(f"terima_vow_awal: user={user_id} target={target!r} max_vow={max_vow}")
 
-    # Guard: if target/max_vow missing, the state was entered incorrectly
     if not target or not max_vow:
-        await update.message.reply_text(
-            "⚠️ Sesi tidak ditemukan. Gunakan /level untuk memulai ulang." if lang == "id"
-            else "⚠️ Session not found. Use /level to start over."
-        )
+        await update.message.reply_text(T("silakan_start", lang))
         return ConversationHandler.END
 
     try:
@@ -696,137 +654,160 @@ async def terima_vow_awal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     day_number = adv_vow_to_day(vow_num) if target == "advanced" else sa_vow_to_day(vow_num)
     join_date = day_to_start_date(day_number)
     context.user_data["upgrade_join_date"] = join_date
-    context.user_data["upgrade_start_vow"] = vow_num
     context.user_data["upgrade_day_number"] = day_number
+
+    # Apply upgrade immediately
+    await _apply_level_upgrade_direct(user_id, context, target, join_date)
 
     label_key = "level_advanced_label" if target == "advanced" else "level_super_label"
     label = T(label_key, lang)
-
-    # Apply upgrade immediately — no confirmation needed
-    await _apply_level_upgrade_direct(update.effective_user.id, context, target, join_date)
-
-    # Show schedule and offer time customization
     jadwal = _format_vow_schedule(target, day_number, lang)
 
     await update.message.reply_text(
         T("vow_awal_konfirmasi", lang, label=label, vow_num=vow_num,
           day_number=day_number, jadwal=jadwal),
         parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton(T("vow_konfirmasi_jam", lang), callback_data="atur_jam_vow")]
-        ])
+        reply_markup=kb_vow_jam_konfirmasi(lang)
     )
     return PILIH_JAM_VOW
 
 
 async def konfirmasi_vow_awal_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handles only atur_jam_vow — upgrade already applied in terima_vow_awal."""
     query = update.callback_query
     await query.answer()
     lang = await _lang(query.from_user.id, context)
-
     if query.data == "atur_jam_vow":
-        db_user = await get_user(query.from_user.id)
-        current_times = (db_user.get("vow_times") or "07:00 09:30 12:00 14:30 17:00 19:30") if db_user else "07:00 09:30 12:00 14:30 17:00 19:30"
-        await query.message.reply_text(
-            T("vow_jam_prompt", lang) + f"\n\n_Jadwal saat ini: `{current_times}`_",
-            parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton(T("vow_jam_default_label", lang), callback_data="jam_vow_default")]
-            ])
-        )
-        return PILIH_JAM_VOW
-
+        return await _vow_jam_next_slot(query.message, context, lang, slot=0)
     return ConversationHandler.END
 
 
+# ─── VOW TIME — SEQUENTIAL ───────────────────────────────────────────────────
+
+async def _vow_jam_next_slot(message, context, lang: str, slot: int):
+    context.user_data["vow_jam_slot"] = slot
+    slot_names = T("vow_jam_slot_names", lang)
+    if isinstance(slot_names, str):
+        import json
+        slot_names = json.loads(slot_names)
+    current = VOW_JAM_DEFAULTS[slot]
+    await message.reply_text(
+        T("vow_jam_prompt", lang, n=slot + 1, nama_slot=slot_names[slot], jam_sekarang=current),
+        parse_mode="Markdown",
+        reply_markup=kb_setjam_lewati(lang)
+    )
+    return PILIH_JAM_VOW
+
+
 async def terima_jam_vow(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Receive 6 custom notification times for vow levels."""
     lang = await _lang(update.effective_user.id, context)
     teks = update.message.text.strip()
-    parts = teks.split()
-    valid = True
-    if len(parts) != 6:
-        valid = False
-    else:
-        import re
-        for p in parts:
-            if not re.match(r"^\d{2}:\d{2}$", p):
-                valid = False
-                break
-            h, m = p.split(":")
-            if not (0 <= int(h) <= 23 and 0 <= int(m) <= 59):
-                valid = False
-                break
-
-    if not valid:
+    if not _valid_time(teks):
         await update.message.reply_text(T("vow_jam_invalid", lang))
         return PILIH_JAM_VOW
-
-    await update_user(update.effective_user.id, vow_times=teks)
-    jadwal_jam = "\n".join(f"  {p}" for p in parts)
-    await update.message.reply_text(
-        T("vow_jam_dikonfirmasi", lang, jadwal_jam=jadwal_jam),
-        parse_mode="Markdown"
-    )
-    return PILIH_VOW_AWAL
+    slot = context.user_data.get("vow_jam_slot", 0)
+    vow_times = context.user_data.get("vow_times_new", list(VOW_JAM_DEFAULTS))
+    vow_times[slot] = teks
+    context.user_data["vow_times_new"] = vow_times
+    return await _vow_jam_advance(update.message, context, lang, slot)
 
 
-async def jam_vow_default_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def lewati_vow_jam_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     lang = await _lang(query.from_user.id, context)
-    default = "07:00 09:30 12:00 14:30 17:00 19:30"
-    await update_user(query.from_user.id, vow_times=default)
-    await query.edit_message_text(
-        T("vow_jam_dikonfirmasi", lang, jadwal_jam="\n  ".join(default.split())),
-        parse_mode="Markdown"
+    slot = context.user_data.get("vow_jam_slot", 0)
+    vow_times = context.user_data.get("vow_times_new", list(VOW_JAM_DEFAULTS))
+    context.user_data["vow_times_new"] = vow_times  # keep default
+    return await _vow_jam_advance(query.message, context, lang, slot)
+
+
+async def _vow_jam_advance(message, context, lang: str, slot: int):
+    slot += 1
+    if slot < 6:
+        return await _vow_jam_next_slot(message, context, lang, slot)
+    # All 6 slots done — save
+    vow_times = context.user_data.get("vow_times_new", VOW_JAM_DEFAULTS)
+    await update_user(message.chat.id, vow_times=" ".join(vow_times))
+    slot_names = T("vow_jam_slot_names", lang)
+    if isinstance(slot_names, str):
+        import json
+        slot_names = json.loads(slot_names)
+    ringkasan = "\n".join(f"  {slot_names[i]}: {vow_times[i]}" for i in range(6))
+    await message.reply_text(
+        T("vow_jam_selesai", lang, ringkasan=ringkasan), parse_mode="Markdown"
     )
-    return PILIH_VOW_AWAL
+    context.user_data.pop("vow_times_new", None)
+    return ConversationHandler.END
 
 
-async def _apply_level_upgrade(source, context, target, join_date=None):
-    user_id = source.from_user.id
-    lang = await _lang(user_id, context)
-    update_kwargs = {"level": target}
+# ─── SETJAM SEQUENTIAL ───────────────────────────────────────────────────────
 
-    if target in ("advanced", "super_advanced"):
-        update_kwargs["join_date"] = join_date if join_date else date.today()
-        update_kwargs["kebajikan_fokus"] = list(range(1, 11))
-
-    # If coming from onboarding (not /level), mark as complete
+async def cmd_setjam(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     db_user = await get_user(user_id)
-    if db_user and not db_user.get("onboarding_selesai"):
-        update_kwargs["onboarding_selesai"] = 1
+    lang = db_user.get("bahasa", "id") if db_user else "id"
+    context.user_data["lang"] = lang
+    context.user_data["setjam_slot"] = 0
+    context.user_data["setjam_new"] = list(SETJAM_DEFAULTS)
+    return await _setjam_next_slot(update.message, context, lang, 0, db_user)
 
-    await update_user(user_id, **update_kwargs)
 
-    label_map = {
-        "pemula":         T("level_pemula_label", lang),
-        "menengah":       T("level_menengah_label", lang),
-        "mahir":          T("level_mahir_label", lang),
-        "advanced":       T("level_advanced_label", lang),
-        "super_advanced": T("level_super_label", lang),
-    }
-    label = label_map.get(target, target)
-
-    if target == "advanced":
-        text = T("upgrade_berhasil_advanced", lang, label=label)
-    elif target == "super_advanced":
-        text = T("upgrade_berhasil_super", lang, label=label)
+async def _setjam_next_slot(message, context, lang: str, slot: int, db_user=None):
+    context.user_data["setjam_slot"] = slot
+    slot_names = T("setjam_slot_names", lang)
+    if isinstance(slot_names, list):
+        name = slot_names[slot]
     else:
-        text = T("upgrade_berhasil_standar", lang, label=label)
+        name = SETJAM_DB_KEYS[slot]
+    current = (db_user.get(SETJAM_DB_KEYS[slot]) if db_user else None) or SETJAM_DEFAULTS[slot]
+    await message.reply_text(
+        T("setjam_slot_prompt", lang, n=slot + 1, nama_slot=name, jam_sekarang=current),
+        parse_mode="Markdown",
+        reply_markup=kb_setjam_lewati(lang)
+    )
+    return SETJAM_SEQUENTIAL
 
-    try:
-        if hasattr(source, "edit_message_text"):
-            await source.edit_message_text(text, parse_mode="Markdown")
-        else:
-            await source.reply_text(text, parse_mode="Markdown")
-    except Exception:
-        # Fallback: always reply to the message
-        await source.message.reply_text(text, parse_mode="Markdown")
 
-    context.user_data.clear()
+async def terima_setjam(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = await _lang(update.effective_user.id, context)
+    teks = update.message.text.strip()
+    if not _valid_time(teks):
+        await update.message.reply_text(T("setjam_format_salah", lang))
+        return SETJAM_SEQUENTIAL
+    slot = context.user_data.get("setjam_slot", 0)
+    new_times = context.user_data.get("setjam_new", list(SETJAM_DEFAULTS))
+    new_times[slot] = teks
+    context.user_data["setjam_new"] = new_times
+    return await _setjam_advance(update.message, context, lang, slot)
+
+
+async def lewati_setjam_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+    slot = context.user_data.get("setjam_slot", 0)
+    return await _setjam_advance(query.message, context, lang, slot)
+
+
+async def _setjam_advance(message, context, lang: str, slot: int):
+    slot += 1
+    if slot < 7:
+        db_user = None  # don't re-fetch, keep defaults for remaining
+        return await _setjam_next_slot(message, context, lang, slot, db_user)
+    # All 7 done — save
+    user_id = message.chat.id
+    new_times = context.user_data.get("setjam_new", SETJAM_DEFAULTS)
+    save_kwargs = {SETJAM_DB_KEYS[i]: new_times[i] for i in range(7)}
+    await update_user(user_id, **save_kwargs)
+    slot_names = T("setjam_slot_names", lang)
+    if not isinstance(slot_names, list):
+        slot_names = SETJAM_DB_KEYS
+    ringkasan = "\n".join(f"  {slot_names[i]}: {new_times[i]}" for i in range(7))
+    await message.reply_text(
+        T("setjam_selesai", lang, ringkasan=ringkasan), parse_mode="Markdown"
+    )
+    context.user_data.pop("setjam_new", None)
+    return ConversationHandler.END
 
 
 # ─── 06:00 CALLBACK ──────────────────────────────────────────────────────────
@@ -837,49 +818,52 @@ async def callback_pagi_ganti(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = query.from_user.id
     db_user = await get_user(user_id)
     lang = db_user.get("bahasa", "id") if db_user else "id"
-
     if query.data == "pagi_ganti_ya":
-        await query.edit_message_text(T("pagi_ganti_instruksi", lang), parse_mode="Markdown")
+        await query.edit_message_text(
+            T("pagi_ganti_instruksi", lang), parse_mode="Markdown"
+        )
     else:
         fokus = db_user.get("kebajikan_fokus", []) if db_user else []
-        from utils.messages import format_pagi_lanjut_konfirmasi
         await query.edit_message_text(
-            format_pagi_lanjut_konfirmasi(fokus, lang),
-            parse_mode="Markdown"
+            format_pagi_lanjut_konfirmasi(fokus, lang), parse_mode="Markdown"
         )
 
 
-# ─── /setjam ─────────────────────────────────────────────────────────────────
+# ─── /level UPGRADE APPLY ────────────────────────────────────────────────────
 
-async def cmd_atur_jam(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = await _lang(update.effective_user.id, context)
-    await update.message.reply_text(T("setjam_bantuan", lang), parse_mode="Markdown")
-
-
-async def cmd_setjam(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = await _lang(update.effective_user.id, context)
-    args = context.args
-    if len(args) != 2:
-        await update.message.reply_text("`/setjam pagi 07:30`", parse_mode="Markdown")
-        return
-
-    sesi_map = {"pagi":"jam_pagi","siang":"jam_siang","sore":"jam_sore","malam":"jam_malam","cofmed":"jam_cofmed"}
-    sesi = args[0].lower()
-    jam = args[1]
-
-    if sesi not in sesi_map:
-        await update.message.reply_text(f"Pilihan: pagi, siang, sore, malam, cofmed")
-        return
-
+async def _apply_level_upgrade(source, context, target, join_date=None):
+    user_id = source.from_user.id
+    lang = await _lang(user_id, context)
+    update_kwargs = {"level": target}
+    if target in ("advanced", "super_advanced"):
+        update_kwargs["join_date"] = join_date if join_date else date.today()
+        update_kwargs["kebajikan_fokus"] = list(range(1, 11))
+    db_user = await get_user(user_id)
+    if db_user and not db_user.get("onboarding_selesai"):
+        update_kwargs["onboarding_selesai"] = 1
+    await update_user(user_id, **update_kwargs)
+    label_map = {
+        "pemula":         T("level_pemula_label",   lang),
+        "menengah":       T("level_menengah_label", lang),
+        "mahir":          T("level_mahir_label",    lang),
+        "advanced":       T("level_advanced_label", lang),
+        "super_advanced": T("level_super_label",    lang),
+    }
+    label = label_map.get(target, target)
+    if target == "advanced":
+        text = T("upgrade_berhasil_advanced", lang, label=label)
+    elif target == "super_advanced":
+        text = T("upgrade_berhasil_super", lang, label=label)
+    else:
+        text = T("upgrade_berhasil_standar", lang, label=label)
     try:
-        h, m = jam.split(":")
-        assert 0 <= int(h) <= 23 and 0 <= int(m) <= 59
+        if hasattr(source, "edit_message_text"):
+            await source.edit_message_text(text, parse_mode="Markdown")
+        else:
+            await source.reply_text(text, parse_mode="Markdown")
     except Exception:
-        await update.message.reply_text(T("setjam_format_salah", lang))
-        return
-
-    await update_user(update.effective_user.id, **{sesi_map[sesi]: jam})
-    await update.message.reply_text(T("setjam_berhasil", lang, sesi=sesi, jam=jam), parse_mode="Markdown")
+        await source.message.reply_text(text, parse_mode="Markdown")
+    context.user_data.clear()
 
 
 # ─── CONVERSATION HANDLER ────────────────────────────────────────────────────
@@ -887,30 +871,38 @@ async def cmd_setjam(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def build_conversation_handler():
     return ConversationHandler(
         entry_points=[
-            CommandHandler("start", start),
+            CommandHandler("start",    start),
             CommandHandler("refleksi", cmd_refleksi),
-            CommandHandler("ganti", cmd_ganti),
+            CommandHandler("reflect",  cmd_refleksi),
+            CommandHandler("ganti",    cmd_ganti),
+            CommandHandler("change",   cmd_ganti),
             CommandHandler("tambahan", cmd_tambahan),
-            CommandHandler("level", cmd_level),
+            CommandHandler("add",      cmd_tambahan),
+            CommandHandler("level",    cmd_level),
             CommandHandler("language", cmd_language),
+            CommandHandler("setjam",   cmd_setjam),
+            CommandHandler("settime",  cmd_setjam),
         ],
         states={
             PILIH_BAHASA: [
                 CallbackQueryHandler(pilih_bahasa_cb, pattern="^lang_"),
                 CallbackQueryHandler(ganti_bahasa_cb, pattern="^lang_"),
             ],
+            PILIH_TIMEZONE: [
+                CallbackQueryHandler(pilih_timezone_cb, pattern="^tz_"),
+            ],
             PILIH_LEVEL: [
-                CallbackQueryHandler(pilih_level_cb, pattern="^level_")
+                CallbackQueryHandler(pilih_level_cb, pattern="^level_"),
             ],
             ONBOARDING_GOAL: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, terima_goal)
             ],
             ONBOARDING_GOAL_REVISI: [
-                CallbackQueryHandler(goal_lanjut_cb, pattern="^goal_lanjut$"),
-                CallbackQueryHandler(goal_revisi_cb, pattern="^goal_revisi$"),
+                CallbackQueryHandler(goal_lanjut_cb,  pattern="^goal_lanjut$"),
+                CallbackQueryHandler(goal_revisi_cb,  pattern="^goal_revisi$"),
             ],
             ONBOARDING_KONFIRMASI_KEBAJIKAN: [
-                CallbackQueryHandler(kebajikan_setuju_cb, pattern="^kebajikan_setuju$"),
+                CallbackQueryHandler(kebajikan_setuju_cb,  pattern="^kebajikan_setuju$"),
                 CallbackQueryHandler(kebajikan_sendiri_cb, pattern="^kebajikan_sendiri$"),
             ],
             GANTI_PILIH: [
@@ -938,8 +930,12 @@ def build_conversation_handler():
             ],
             PILIH_JAM_VOW: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, terima_jam_vow),
-                CallbackQueryHandler(jam_vow_default_cb, pattern="^jam_vow_default$"),
                 CallbackQueryHandler(konfirmasi_vow_awal_cb, pattern="^atur_jam_vow$"),
+                CallbackQueryHandler(lewati_vow_jam_cb,       pattern="^setjam_lewati$"),
+            ],
+            SETJAM_SEQUENTIAL: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_setjam),
+                CallbackQueryHandler(lewati_setjam_cb, pattern="^setjam_lewati$"),
             ],
         },
         fallbacks=[CommandHandler("start", start)],

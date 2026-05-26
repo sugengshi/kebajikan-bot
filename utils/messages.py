@@ -46,7 +46,7 @@ def format_rekomendasi(level: str, alasan_id: str, alasan_en: str, lang: str = "
     return T("rekomendasi_intro", lang, level_text=level_text, alasan=alasan)
 
 
-def format_onboarding_selesai(name: str, fokus: list, lang: str = "id") -> str:
+def format_onboarding_selesai(name: str, fokus: list, lang: str = "id", tz: str = "Asia/Jakarta") -> str:
     lines = []
     for i, k_id in enumerate(fokus):
         k = KEBAJIKAN.get(k_id, {})
@@ -54,7 +54,8 @@ def format_onboarding_selesai(name: str, fokus: list, lang: str = "id") -> str:
             nama = k["nama"] if lang == "id" else k.get("nama_en", k["nama"])
             lines.append(f"{k['emoji']} {nama}")
     daftar = "\n".join(lines)
-    return T("onboarding_selesai", lang, name=name, daftar=daftar)
+    jadwal = T("jadwal_harian", lang)
+    return T("onboarding_selesai", lang, name=name, daftar=daftar, tz=tz, jadwal=jadwal)
 
 
 def format_pagi_ganti_tanya(fokus: list, lang: str = "id") -> str:

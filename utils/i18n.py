@@ -1,50 +1,78 @@
 # utils/i18n.py
-# All bot messages in English and Indonesian.
-# Usage: T("key", lang) — returns the string in the user's language.
+# Complete bilingual string table. T(key, lang, **kwargs) returns translated string.
 
 STRINGS = {
 
     # ─── ONBOARDING ──────────────────────────────────────────────────────────
 
     "pilih_bahasa": {
-        "id": (
-            "🌏 *Selamat datang di Bot Kebajikan Harian!*\n\n"
-            "Silakan pilih bahasa yang ingin Anda gunakan:"
-        ),
-        "en": (
-            "🌏 *Welcome to the Daily Virtue Bot!*\n\n"
-            "Please choose your preferred language:"
-        ),
+        "id": "🌏 *Selamat datang!*\n\nSilakan pilih bahasa Anda:",
+        "en": "🌏 *Welcome!*\n\nPlease choose your language:",
     },
     "bahasa_dipilih": {
-        "id": "✅ Bahasa Indonesia dipilih. Mari mulai!",
-        "en": "✅ English selected. Let's begin!",
+        "id": "✅ Bahasa Indonesia dipilih.",
+        "en": "✅ English selected.",
     },
+
+    # ─── TIMEZONE ────────────────────────────────────────────────────────────
+
+    "pilih_timezone": {
+        "id": (
+            "🕐 *Pilih Zona Waktu Anda*\n\n"
+            "Ini digunakan untuk jadwal notifikasi harian Anda."
+        ),
+        "en": (
+            "🕐 *Choose Your Timezone*\n\n"
+            "This is used for your daily notification schedule."
+        ),
+    },
+    "timezone_dipilih": {
+        "id": "✅ Zona waktu *{tz}* dipilih.",
+        "en": "✅ Timezone *{tz}* selected.",
+    },
+    "tz_wib":   {"id": "🇮🇩 WIB (UTC+7) — Jakarta",        "en": "🇮🇩 WIB (UTC+7) — Jakarta"},
+    "tz_wita":  {"id": "🇮🇩 WITA (UTC+8) — Bali/Makassar", "en": "🇮🇩 WITA (UTC+8) — Bali/Makassar"},
+    "tz_wit":   {"id": "🇮🇩 WIT (UTC+9) — Papua",          "en": "🇮🇩 WIT (UTC+9) — Papua"},
+    "tz_sgt":   {"id": "🇸🇬 SGT (UTC+8) — Singapore",      "en": "🇸🇬 SGT (UTC+8) — Singapore"},
+    "tz_myt":   {"id": "🇲🇾 MYT (UTC+8) — Malaysia",       "en": "🇲🇾 MYT (UTC+8) — Malaysia"},
+    "tz_ist":   {"id": "🇮🇳 IST (UTC+5:30) — India",       "en": "🇮🇳 IST (UTC+5:30) — India"},
+    "tz_aest":  {"id": "🇦🇺 AEST (UTC+10) — Sydney",       "en": "🇦🇺 AEST (UTC+10) — Sydney"},
+    "tz_gmt":   {"id": "🌍 GMT (UTC+0) — London",           "en": "🌍 GMT (UTC+0) — London"},
+    "tz_cet":   {"id": "🇪🇺 CET (UTC+1) — Europe",         "en": "🇪🇺 CET (UTC+1) — Europe"},
+    "tz_est":   {"id": "🇺🇸 EST (UTC-5) — New York",       "en": "🇺🇸 EST (UTC-5) — New York"},
+    "tz_pst":   {"id": "🇺🇸 PST (UTC-8) — Los Angeles",    "en": "🇺🇸 PST (UTC-8) — Los Angeles"},
+
+    # ─── SAMBUTAN ────────────────────────────────────────────────────────────
+
     "sambutan": {
         "id": (
             "🙏 *Selamat datang di Bot Kebajikan Harian*\n\n"
             "Bot ini memandu Anda memantau dan mengembangkan kebajikan setiap hari "
             "berdasarkan *10 Bibit Baik Utama*.\n\n"
-            "Pertama, pilih level praktik Anda:"
+            "Pilih level praktik Anda:"
         ),
         "en": (
             "🙏 *Welcome to the Daily Virtue Bot*\n\n"
             "This bot guides you in monitoring and developing virtues every day "
             "based on the *10 Main Virtue Seeds*.\n\n"
-            "First, please choose your practice level:"
+            "Choose your practice level:"
         ),
     },
     "sambutan_kembali": {
         "id": (
             "🙏 Selamat datang kembali, *{name}*!\n\n"
-            "Gunakan /kebajikan untuk melihat fokus hari ini, "
-            "/refleksi untuk mengisi refleksi, atau /bantuan untuk daftar perintah."
+            "Gunakan /{cmd_kebajikan} untuk melihat fokus hari ini, "
+            "/{cmd_refleksi} untuk refleksi, atau /{cmd_help} untuk daftar perintah."
         ),
         "en": (
             "🙏 Welcome back, *{name}*!\n\n"
-            "Use /kebajikan to see today's focus, "
-            "/refleksi to fill in your reflection, or /bantuan for the command list."
+            "Use /{cmd_kebajikan} to see today's focus, "
+            "/{cmd_refleksi} for reflection, or /{cmd_help} for the command list."
         ),
+    },
+    "silakan_start": {
+        "id": "Silakan mulai dengan /start.",
+        "en": "Please start with /start.",
     },
 
     # ─── LEVEL SELECTION ─────────────────────────────────────────────────────
@@ -53,11 +81,11 @@ STRINGS = {
         "id": "📊 *Pilih Level Praktik Anda:*",
         "en": "📊 *Choose Your Practice Level:*",
     },
-    "level_pemula_label":        {"id": "🌱 Pemula",                          "en": "🌱 Beginner"},
-    "level_menengah_label":      {"id": "🌿 Praktisi Menengah",               "en": "🌿 Intermediate Practitioner"},
-    "level_mahir_label":         {"id": "🌳 Praktisi Mahir",                  "en": "🌳 Advanced Practitioner"},
-    "level_advanced_label":      {"id": "🪷 Advanced (Sumpah Bodhisattva)",   "en": "🪷 Advanced (Bodhisattva Vows)"},
-    "level_super_label":         {"id": "💎 Super Advanced (Sumpah Tantra)",  "en": "💎 Super Advanced (Tantric Vows)"},
+    "level_pemula_label":   {"id": "🌱 Pemula",                         "en": "🌱 Beginner"},
+    "level_menengah_label": {"id": "🌿 Praktisi Menengah",              "en": "🌿 Intermediate Practitioner"},
+    "level_mahir_label":    {"id": "🌳 Praktisi Mahir",                 "en": "🌳 Advanced Practitioner"},
+    "level_advanced_label": {"id": "🪷 Advanced (Sumpah Bodhisattva)",  "en": "🪷 Advanced (Bodhisattva Vows)"},
+    "level_super_label":    {"id": "💎 Super Advanced (Sumpah Tantra)", "en": "💎 Super Advanced (Tantric Vows)"},
     "level_dipilih": {
         "id": "👍 Level Anda: *{label}*\n_{desc}_",
         "en": "👍 Your level: *{label}*\n_{desc}_",
@@ -67,7 +95,7 @@ STRINGS = {
 
     "tujuan_smart_prompt": {
         "id": (
-            "🎯 *Langkah 1 — Tujuan SMART Anda*\n\n"
+            "🎯 *Tujuan SMART Anda*\n\n"
             "Tuliskan satu tujuan yang ingin Anda capai melalui praktik kebajikan ini.\n\n"
             "Bot akan mengevaluasi apakah tujuan Anda memenuhi kriteria *SMART:*\n"
             "• *S*pesifik — jelas dan konkret\n"
@@ -75,12 +103,11 @@ STRINGS = {
             "• *A*chievable — bisa dicapai\n"
             "• *R*elevant — bermakna bagi Anda\n"
             "• *T*ime-bound — ada batas waktunya\n\n"
-            "_Contoh: Dalam 30 hari ke depan, saya ingin lebih sabar berbicara "
-            "dengan anak-anak saya._\n\n"
+            "_Contoh: Dalam 30 hari ke depan, saya ingin lebih sabar berbicara dengan anak-anak saya._\n\n"
             "✏️ *Tuliskan tujuan Anda:*"
         ),
         "en": (
-            "🎯 *Step 1 — Your SMART Goal*\n\n"
+            "🎯 *Your SMART Goal*\n\n"
             "Write one goal you want to achieve through this virtue practice.\n\n"
             "The bot will evaluate whether your goal meets the *SMART* criteria:\n"
             "• *S*pecific — clear and concrete\n"
@@ -88,8 +115,7 @@ STRINGS = {
             "• *A*chievable — can be accomplished\n"
             "• *R*elevant — meaningful to you\n"
             "• *T*ime-bound — has a deadline\n\n"
-            "_Example: In the next 30 days, I want to speak more patiently "
-            "with my children._\n\n"
+            "_Example: In the next 30 days, I want to speak more patiently with my children._\n\n"
             "✏️ *Write your goal:*"
         ),
     },
@@ -116,20 +142,11 @@ STRINGS = {
             "Do you agree with this recommendation?"
         ),
     },
-    "rekomendasi_level_pemula": {
-        "id": "Sebagai Pemula, bot merekomendasikan *1 kebajikan utama* untuk Anda fokusi:",
-        "en": "As a Beginner, the bot recommends *1 main virtue* for you to focus on:",
-    },
-    "rekomendasi_level_menengah": {
-        "id": "Sebagai Praktisi Menengah, bot merekomendasikan *3 kebajikan* (1 utama + 2 pendukung):",
-        "en": "As an Intermediate Practitioner, the bot recommends *3 virtues* (1 main + 2 supporting):",
-    },
-    "rekomendasi_level_mahir": {
-        "id": "Sebagai Praktisi Mahir, ini *titik masuk* yang direkomendasikan:",
-        "en": "As an Advanced Practitioner, here is the recommended *entry point*:",
-    },
-    "setuju_label":       {"id": "✅ Mulai Sekarang!", "en": "✅ Start Now!"},
-    "pilih_sendiri_label":{"id": "🔄 Pilih sendiri",  "en": "🔄 Choose myself"},
+    "rekomendasi_level_pemula":   {"id": "Sebagai Pemula, bot merekomendasikan *1 kebajikan utama:*",             "en": "As a Beginner, the bot recommends *1 main virtue:*"},
+    "rekomendasi_level_menengah": {"id": "Sebagai Praktisi Menengah, bot merekomendasikan *3 kebajikan:*",        "en": "As an Intermediate Practitioner, the bot recommends *3 virtues:*"},
+    "rekomendasi_level_mahir":    {"id": "Sebagai Praktisi Mahir, ini *titik masuk* yang direkomendasikan:",      "en": "As an Advanced Practitioner, here is the recommended *entry point:*"},
+    "setuju_label":        {"id": "✅ Mulai Sekarang!", "en": "✅ Start Now!"},
+    "pilih_sendiri_label": {"id": "🔄 Pilih sendiri",  "en": "🔄 Choose myself"},
 
     # ─── ONBOARDING COMPLETE ─────────────────────────────────────────────────
 
@@ -138,29 +155,35 @@ STRINGS = {
             "🎉 *Selamat, {name}!*\n\n"
             "Anda telah resmi memulai perjalanan kebajikan Anda.\n\n"
             "*Fokus kebajikan Anda:*\n{daftar}\n\n"
-            "*Jadwal harian (WIB):*\n"
+            "*Jadwal harian ({tz}):*\n{jadwal}\n\n"
+            "Gunakan /setjam untuk mengatur ulang jam notifikasi. 🙏"
+        ),
+        "en": (
+            "🎉 *Congratulations, {name}!*\n\n"
+            "You have officially started your virtue journey.\n\n"
+            "*Your virtue focus:*\n{daftar}\n\n"
+            "*Daily schedule ({tz}):*\n{jadwal}\n\n"
+            "Use /setjam to adjust notification times. 🙏"
+        ),
+    },
+    "jadwal_harian": {
+        "id": (
             "06:00 — Pilihan fokus hari ini\n"
             "07:00 — Refleksi pagi\n"
             "12:00 — Refleksi siang\n"
             "18:00 — Refleksi sore\n"
             "20:00 — Tambahan perbuatan baik\n"
             "21:00 — Ringkasan positif\n"
-            "21:30 — Arsip pribadi\n\n"
-            "Gunakan /setjam untuk melakukan pengaturan waktu notifikasi. 🙏"
+            "21:30 — Arsip pribadi"
         ),
         "en": (
-            "🎉 *Congratulations, {name}!*\n\n"
-            "You have officially started your virtue journey.\n\n"
-            "*Your virtue focus:*\n{daftar}\n\n"
-            "*Daily schedule (WIB):*\n"
             "06:00 — Today's focus check\n"
             "07:00 — Morning reflection\n"
             "12:00 — Midday reflection\n"
             "18:00 — Afternoon reflection\n"
             "20:00 — Additional good deeds\n"
             "21:00 — Positive summary\n"
-            "21:30 — Personal archive\n\n"
-            "Use /setjam to set your notification times. 🙏"
+            "21:30 — Personal archive"
         ),
     },
 
@@ -170,22 +193,24 @@ STRINGS = {
         "id": "🌅 *Selamat pagi!*\n\nFokus kebajikan Anda saat ini:\n\n{daftar}\n\nApakah ingin *mengganti* fokus kebajikan hari ini?",
         "en": "🌅 *Good morning!*\n\nYour current virtue focus:\n\n{daftar}\n\nWould you like to *change* your virtue focus for today?",
     },
-    "pagi_ganti_ya_label":    {"id": "🔄 Ya, ganti",   "en": "🔄 Yes, change"},
-    "pagi_ganti_tidak_label": {"id": "✅ Lanjutkan",    "en": "✅ Continue"},
+    "pagi_ganti_ya_label":    {"id": "🔄 Ya, ganti",  "en": "🔄 Yes, change"},
+    "pagi_ganti_tidak_label": {"id": "✅ Lanjutkan",   "en": "✅ Continue"},
     "pagi_lanjut_konfirmasi": {
-        "id": "✅ *Fokus kebajikan hari ini tetap:*\n\n{daftar}\n\nRefleksi pagi akan dimulai sesuai jadwal Anda. 🙏",
+        "id": "✅ *Fokus kebajikan hari ini tetap:*\n\n{daftar}\n\nRefleksi pagi akan dimulai sesuai jadwal. 🙏",
         "en": "✅ *Today's virtue focus remains:*\n\n{daftar}\n\nMorning reflection will begin on schedule. 🙏",
     },
     "pagi_ganti_instruksi": {
-        "id": "🔄 Gunakan /ganti untuk memilih kebajikan fokus baru hari ini.",
-        "en": "🔄 Use /ganti to choose a new virtue focus for today.",
+        "id": "🔄 Gunakan /{cmd_ganti} untuk memilih kebajikan fokus baru hari ini.",
+        "en": "🔄 Use /{cmd_ganti} to choose a new virtue focus for today.",
     },
 
-    # ─── REFLEKSI ────────────────────────────────────────────────────────────
+    # ─── SESI LABELS ─────────────────────────────────────────────────────────
 
-    "sesi_pagi_label":  {"id": "🌅 Pagi (07:00)",   "en": "🌅 Morning (07:00)"},
-    "sesi_siang_label": {"id": "☀️ Siang (12:00)",  "en": "☀️ Midday (12:00)"},
-    "sesi_sore_label":  {"id": "🌇 Sore (18:00)",   "en": "🌇 Afternoon (18:00)"},
+    "sesi_pagi_label":  {"id": "🌅 Pagi (07:00)",  "en": "🌅 Morning (07:00)"},
+    "sesi_siang_label": {"id": "☀️ Siang (12:00)", "en": "☀️ Midday (12:00)"},
+    "sesi_sore_label":  {"id": "🌇 Sore (18:00)",  "en": "🌇 Afternoon (18:00)"},
+
+    # ─── REFLEKSI ────────────────────────────────────────────────────────────
 
     "refleksi_positif": {
         "id": (
@@ -197,11 +222,11 @@ STRINGS = {
             "_Tidak ada yang terlalu kecil untuk dicatat. Bahkan niat pun sudah menjadi bibit._"
         ),
         "en": (
-            "{sesi}\n{emoji} *{nama_en}*\n\n"
+            "{sesi}\n{emoji} *{nama}*\n\n"
             "🔍 *Question 1 of 3*\n\n"
             "Over the *last 24 hours*, expanding the meaning of this virtue:\n\n"
             "_{pertanyaan}_\n\n"
-            "✅ *What did you do or think that is IN LINE with this virtue?*\n\n"
+            "✅ *What did you do or think that was IN LINE with this virtue?*\n\n"
             "_Nothing is too small to note. Even an intention is already a seed._"
         ),
     },
@@ -215,7 +240,7 @@ STRINGS = {
             "Anda bisa menulis 'tidak ada' jika memang tidak ada._"
         ),
         "en": (
-            "{sesi}\n{emoji} *{nama_en}*\n\n"
+            "{sesi}\n{emoji} *{nama}*\n\n"
             "🔍 *Question 2 of 3*\n\n"
             "⚠️ *Were there any actions, words, or thoughts that were OUT OF LINE "
             "with this virtue in the last 24 hours?*\n\n"
@@ -232,7 +257,7 @@ STRINGS = {
             "_Satu tindakan kecil pun sudah cukup. Yang penting nyata dan bisa dilakukan._"
         ),
         "en": (
-            "{sesi}\n{emoji} *{nama_en}*\n\n"
+            "{sesi}\n{emoji} *{nama}*\n\n"
             "🔍 *Question 3 of 3*\n\n"
             "🌱 *To balance the negative seeds above, what concrete plan will "
             "you carry out in the next 24 hours?*\n\n"
@@ -252,11 +277,19 @@ STRINGS = {
             "✅ *Positive:* {positif}\n\n"
             "⚠️ *To balance:* {negatif}\n\n"
             "🌱 *Plan for next 24 hours:* {rencana}\n\n"
-            "Thank you for being honest and thorough! These notes are saved. 🙏"
+            "Thank you for being honest and thorough! Notes saved. 🙏"
         ),
     },
+    "belum_mulai": {
+        "id": "Silakan mulai dengan /start.",
+        "en": "Please start with /start.",
+    },
+    "refleksi_belum": {
+        "id": "Sesi refleksi tidak ditemukan. Gunakan /{cmd_refleksi} untuk memulai.",
+        "en": "Reflection session not found. Use /{cmd_refleksi} to start.",
+    },
 
-    # ─── 20:00 TAMBAHAN ──────────────────────────────────────────────────────
+    # ─── TAMBAHAN MALAM ──────────────────────────────────────────────────────
 
     "tambahan_malam_prompt": {
         "id": (
@@ -276,15 +309,15 @@ STRINGS = {
     },
     "tambahan_tidak_ada_label": {"id": "✅ Tidak ada tambahan", "en": "✅ None"},
     "tambahan_tersimpan": {
-        "id": "✨ Catatan tersimpan. Terima kasih! 🙏\nKetuk /tambahan lagi jika ingin menambah.",
-        "en": "✨ Notes saved. Thank you! 🙏\nTap /tambahan again if you want to add more.",
+        "id": "✨ Catatan tersimpan. Terima kasih! 🙏",
+        "en": "✨ Notes saved. Thank you! 🙏",
     },
     "tambahan_selesai": {
         "id": "✅ Baik! Arsip akan dikirim pukul 21:30. 🙏",
-        "en": "✅ Great! The archive will be sent at 21:30. 🙏",
+        "en": "✅ Got it! The archive will be sent at 21:30. 🙏",
     },
 
-    # ─── 21:00 RINGKASAN POSITIF ─────────────────────────────────────────────
+    # ─── 21:00 RINGKASAN ─────────────────────────────────────────────────────
 
     "ringkasan_judul": {
         "id": "✨ *Perbuatan Baik Anda Hari Ini*\n_{tanggal}_\n\n─────────────────────\n",
@@ -303,7 +336,7 @@ STRINGS = {
         "en": "🌙 *Additional Good Deeds:*\n",
     },
 
-    # ─── 21:30 ARSIP PRIBADI ─────────────────────────────────────────────────
+    # ─── 21:30 ARSIP ─────────────────────────────────────────────────────────
 
     "arsip_judul": {
         "id": "📁 *Arsip Pribadi Harian{sapaan}*\n_{tanggal}_\n\n═════════════════════\n",
@@ -313,8 +346,8 @@ STRINGS = {
         "id": "📁 *Arsip Pribadi*\n\nBelum ada entri untuk hari ini.\nIstirahatlah dengan tenang. 🙏",
         "en": "📁 *Personal Archive*\n\nNo entries for today.\nRest well. 🙏",
     },
-    "arsip_positif_label":  {"id": "✅ *Sesuai kebajikan:*\n",      "en": "✅ *In line with virtue:*\n"},
-    "arsip_negatif_label":  {"id": "⚠️ *Perlu diseimbangkan:*\n",  "en": "⚠️ *To balance:*\n"},
+    "arsip_positif_label":  {"id": "✅ *Sesuai kebajikan:*\n",       "en": "✅ *In line with virtue:*\n"},
+    "arsip_negatif_label":  {"id": "⚠️ *Perlu diseimbangkan:*\n",   "en": "⚠️ *To balance:*\n"},
     "arsip_rencana_label":  {"id": "🌱 *Rencana 24 jam ke depan:*\n","en": "🌱 *Plan for next 24 hours:*\n"},
     "arsip_tambahan_label": {"id": "🌙 *Tambahan Perbuatan Baik (20:00)*\n", "en": "🌙 *Additional Good Deeds (20:00)*\n"},
     "arsip_penutup": {
@@ -325,14 +358,14 @@ STRINGS = {
     # ─── PENGINGAT ───────────────────────────────────────────────────────────
 
     "pengingat": {
-        "id": "⏰ *Pengingat*\n\nRefleksi {sesi} untuk {emoji} *{nama}* Anda belum terisi.\nKetuk /refleksi untuk mulai mengisi sekarang. 🙏",
-        "en": "⏰ *Reminder*\n\nYour {sesi} reflection for {emoji} *{nama}* hasn't been filled in yet.\nTap /refleksi to fill it in now. 🙏",
+        "id": "⏰ *Pengingat*\n\nRefleksi {sesi} untuk {emoji} *{nama}* Anda belum terisi.\nKetuk /{cmd_refleksi} untuk mulai mengisi sekarang. 🙏",
+        "en": "⏰ *Reminder*\n\nYour {sesi} reflection for {emoji} *{nama}* hasn't been filled in yet.\nTap /{cmd_refleksi} to fill it in now. 🙏",
     },
 
     # ─── SUMPAH (ADVANCED/SUPER ADVANCED) ────────────────────────────────────
 
-    "sumpah_label_advanced":      {"id": "Sumpah Bodhisattva 🪷", "en": "Bodhisattva Vow 🪷"},
-    "sumpah_label_super":         {"id": "Sumpah Tantra 💎",       "en": "Tantric Vow 💎"},
+    "sumpah_label_advanced": {"id": "Sumpah Bodhisattva 🪷", "en": "Bodhisattva Vow 🪷"},
+    "sumpah_label_super":    {"id": "Sumpah Tantra 💎",       "en": "Tantric Vow 💎"},
     "sumpah_renungan": {
         "id": "_Renungkan sumpah ini dalam setiap tindakan, perkataan, dan pikiran Anda hari ini._ 🙏",
         "en": "_Contemplate this vow in every action, word, and thought today._ 🙏",
@@ -349,8 +382,8 @@ STRINGS = {
         "en": "🔐 *{label}*\n\nEnter the password to access this level:",
     },
     "password_salah": {
-        "id": "❌ Kata sandi salah. Gunakan /level untuk mencoba lagi.",
-        "en": "❌ Wrong password. Use /level to try again.",
+        "id": "❌ Kata sandi salah. Gunakan /{cmd_level} untuk mencoba lagi.",
+        "en": "❌ Wrong password. Use /{cmd_level} to try again.",
     },
     "password_belum_dikonfigurasi": {
         "id": "⚠️ Kata sandi belum dikonfigurasi. Hubungi administrator.",
@@ -410,25 +443,8 @@ STRINGS = {
             "You're all set. Tap below to adjust notification times if needed."
         ),
     },
-    "vow_konfirmasi_ya":      {"id": "✅ Ya, mulai!",        "en": "✅ Yes, start!"},
-    "vow_konfirmasi_ubah":    {"id": "✏️ Ubah sumpah",      "en": "✏️ Change vow"},
-    "vow_konfirmasi_jam":     {"id": "⏰ Atur jam notifikasi","en": "⏰ Set notification times"},
-    "vow_ubah_prompt":        {"id": "Ketik ulang nomor sumpah awal:", "en": "Type the starting vow number again:"},
-    "vow_jam_prompt": {
-        "id": (
-            "⏰ *Atur Jam Notifikasi Sumpah*\n\n"
-            "Sumpah dikirim 6 kali sehari. Ketik 6 jam dalam format HH:MM, dipisah spasi:\n\n"
-            "_Contoh: `07:00 09:30 12:00 14:30 17:00 19:30`_\n\n"
-            "Atau ketuk *Gunakan default* untuk menggunakan jadwal standar."
-        ),
-        "en": (
-            "⏰ *Set Vow Notification Times*\n\n"
-            "Vows are sent 6 times a day. Type 6 times in HH:MM format, separated by spaces:\n\n"
-            "_Example: `07:00 09:30 12:00 14:30 17:00 19:30`_\n\n"
-            "Or tap *Use default* to use the standard schedule."
-        ),
-    },
-    "vow_jam_default_label":  {"id": "✅ Gunakan default", "en": "✅ Use default"},
+    "vow_konfirmasi_jam":     {"id": "⏰ Atur jam notifikasi", "en": "⏰ Set notification times"},
+    "vow_jam_default_label":  {"id": "✅ Gunakan default",     "en": "✅ Use default"},
     "vow_jam_invalid": {
         "id": "⚠️ Format tidak valid. Ketik tepat 6 jam dalam format HH:MM, dipisah spasi:",
         "en": "⚠️ Invalid format. Type exactly 6 times in HH:MM format, separated by spaces:",
@@ -440,15 +456,13 @@ STRINGS = {
     "upgrade_berhasil_advanced": {
         "id": (
             "✅ Level berhasil diubah ke *{label}*!\n\n"
-            "🪷 *Sumpah Bodhisattva* akan dikirim 6 kali sehari:\n"
-            "07:00 · 09:30 · 12:00 · 14:30 · 17:00 · 19:30\n"
+            "🪷 *Sumpah Bodhisattva* akan dikirim 6 kali sehari.\n"
             "Rotasi 147 hari — setiap sumpah muncul sekali per siklus.\n\n"
             "_Semoga praktik Anda semakin mendalam._ 🙏"
         ),
         "en": (
             "✅ Level successfully changed to *{label}*!\n\n"
-            "🪷 *Bodhisattva Vows* will be sent 6 times a day:\n"
-            "07:00 · 09:30 · 12:00 · 14:30 · 17:00 · 19:30\n"
+            "🪷 *Bodhisattva Vows* will be sent 6 times a day.\n"
             "147-day rotation — each vow appears once per cycle.\n\n"
             "_May your practice deepen._ 🙏"
         ),
@@ -456,15 +470,13 @@ STRINGS = {
     "upgrade_berhasil_super": {
         "id": (
             "✅ Level berhasil diubah ke *{label}*!\n\n"
-            "💎 *Sumpah Tantra* akan dikirim 6 kali sehari:\n"
-            "07:00 · 09:30 · 12:00 · 14:30 · 17:00 · 19:30\n"
+            "💎 *Sumpah Tantra* akan dikirim 6 kali sehari.\n"
             "Rotasi 44 hari — 265 sumpah dalam satu siklus.\n\n"
             "_Semoga praktik Anda semakin mendalam._ 🙏"
         ),
         "en": (
             "✅ Level successfully changed to *{label}*!\n\n"
-            "💎 *Tantric Vows* will be sent 6 times a day:\n"
-            "07:00 · 09:30 · 12:00 · 14:30 · 17:00 · 19:30\n"
+            "💎 *Tantric Vows* will be sent 6 times a day.\n"
             "44-day rotation — 265 vows in one cycle.\n\n"
             "_May your practice deepen._ 🙏"
         ),
@@ -480,11 +492,11 @@ STRINGS = {
         "id": "🎯 *Fokus Kebajikan Anda*\n\n_Tujuan: {tujuan}_\n",
         "en": "🎯 *Your Virtue Focus*\n\n_Goal: {tujuan}_\n",
     },
-    "kebajikan_utama_label":    {"id": "Utama",    "en": "Main"},
-    "kebajikan_pendukung_label":{"id": "Pendukung","en": "Supporting"},
+    "kebajikan_utama_label":     {"id": "Utama",    "en": "Main"},
+    "kebajikan_pendukung_label": {"id": "Pendukung","en": "Supporting"},
     "kebajikan_belum_ada": {
-        "id": "Belum ada kebajikan fokus. Gunakan /ganti.",
-        "en": "No virtue focus yet. Use /ganti.",
+        "id": "Belum ada kebajikan fokus. Gunakan /{cmd_ganti}.",
+        "en": "No virtue focus yet. Use /{cmd_ganti}.",
     },
 
     # ─── GANTI KEBAJIKAN ─────────────────────────────────────────────────────
@@ -494,21 +506,23 @@ STRINGS = {
         "en": "🔄 *Change Virtue Focus*\n\nChoose {jumlah} new virtue(s):",
     },
     "selesai_pilih_label": {"id": "✅ Selesai", "en": "✅ Done"},
+    "pilih_minimal":       {"id": "Pilih minimal 1!", "en": "Choose at least 1!"},
     "sudah_penuh_alert": {
         "id": "Sudah memilih {jumlah} kebajikan. Batalkan salah satu dulu.",
         "en": "You've already chosen {jumlah} virtues. Cancel one first.",
     },
 
-    # ─── LAPORAN & BANTUAN ───────────────────────────────────────────────────
+    # ─── LAPORAN & HELP ──────────────────────────────────────────────────────
 
     "laporan_kosong": {
-        "id": "📋 Belum ada catatan hari ini.\nGunakan /refleksi untuk mulai.",
-        "en": "📋 No notes for today yet.\nUse /refleksi to start.",
+        "id": "📋 Belum ada catatan hari ini.\nGunakan /{cmd_refleksi} untuk mulai.",
+        "en": "📋 No notes for today yet.\nUse /{cmd_refleksi} to start.",
     },
-    "bantuan": {
+    "help": {
         "id": (
             "📖 *Daftar Perintah:*\n\n"
-            "/start — Mulai atau restart\n"
+            "/start — Mulai ulang\n"
+            "/help — Tampilkan menu ini\n"
             "/kebajikan — Fokus kebajikan hari ini\n"
             "/refleksi — Isi refleksi sekarang\n"
             "/ganti — Ganti fokus kebajikan\n"
@@ -516,52 +530,61 @@ STRINGS = {
             "/laporan — Ringkasan hari ini\n"
             "/level — Ubah level praktik\n"
             "/language — Ganti bahasa\n"
-            "/setjam — Atur jam notifikasi\n"
-            "/help — Tampilkan menu ini"
+            "/setjam — Atur jam notifikasi"
         ),
         "en": (
             "📖 *Command List:*\n\n"
-            "/start — Start or restart\n"
-            "/kebajikan — Today's virtue focus\n"
-            "/refleksi — Fill in reflection now\n"
-            "/ganti — Change virtue focus\n"
-            "/tambahan — Add good deeds\n"
-            "/laporan — Today's summary\n"
+            "/start — Restart\n"
+            "/help — Show this menu\n"
+            "/virtue — Today's virtue focus\n"
+            "/reflect — Fill in reflection now\n"
+            "/change — Change virtue focus\n"
+            "/add — Add good deeds\n"
+            "/report — Today's summary\n"
             "/level — Change practice level\n"
             "/language — Change language\n"
-            "/setjam — Set notification times\n"
-            "/help — Show this menu"
+            "/settime — Set notification times"
         ),
     },
-    "setjam_bantuan": {
+
+    # ─── SETJAM / SETTIME ────────────────────────────────────────────────────
+
+    "setjam_slot_prompt": {
         "id": (
-            "⏰ *Atur Jam Notifikasi*\n\n"
-            "Kirim pesan dalam format berikut:\n\n"
-            "`/setjam pagi 07:30`\n"
-            "`/setjam siang 13:00`\n"
-            "`/setjam sore 17:00`\n"
-            "`/setjam malam 19:30`\n"
-            "`/setjam cofmed 22:00`\n\n"
-            "Semua waktu dalam WIB (UTC+7)."
+            "⏰ *Atur Jam Notifikasi — Slot {n} dari 7*\n\n"
+            "*{nama_slot}*\n"
+            "Jam saat ini: `{jam_sekarang}`\n\n"
+            "Ketik jam baru dalam format *HH:MM*, atau ketuk *Lewati* untuk mempertahankan jam saat ini."
         ),
         "en": (
-            "⏰ *Set Notification Times*\n\n"
-            "Send a message in the following format:\n\n"
-            "`/setjam pagi 07:30`\n"
-            "`/setjam siang 13:00`\n"
-            "`/setjam sore 17:00`\n"
-            "`/setjam malam 19:30`\n"
-            "`/setjam cofmed 22:00`\n\n"
-            "All times are in WIB (UTC+7)."
+            "⏰ *Set Notification Times — Slot {n} of 7*\n\n"
+            "*{nama_slot}*\n"
+            "Current time: `{jam_sekarang}`\n\n"
+            "Type the new time in *HH:MM* format, or tap *Skip* to keep the current time."
         ),
     },
-    "setjam_berhasil": {
-        "id": "✅ Jam {sesi} berhasil diubah ke *{jam}* WIB.",
-        "en": "✅ {sesi} time successfully changed to *{jam}* WIB.",
-    },
+    "setjam_lewati_label": {"id": "⏭ Lewati", "en": "⏭ Skip"},
     "setjam_format_salah": {
-        "id": "Format jam tidak valid. Gunakan HH:MM, contoh: 07:30",
-        "en": "Invalid time format. Use HH:MM, example: 07:30",
+        "id": "Format tidak valid. Gunakan HH:MM, contoh: 07:30",
+        "en": "Invalid format. Use HH:MM, example: 07:30",
+    },
+    "setjam_selesai": {
+        "id": "✅ *Semua jam notifikasi tersimpan!*\n\n{ringkasan}\n\n_Perubahan berlaku mulai besok._ 🙏",
+        "en": "✅ *All notification times saved!*\n\n{ringkasan}\n\n_Changes take effect from tomorrow._ 🙏",
+    },
+    "setjam_slot_names": {
+        "id": ["Fokus pagi (06:00)", "Refleksi pagi (07:00)", "Refleksi siang (12:00)",
+               "Refleksi sore (18:00)", "Tambahan malam (20:00)", "Ringkasan (21:00)", "Arsip pribadi (21:30)"],
+        "en": ["Morning focus (06:00)", "Morning reflection (07:00)", "Midday reflection (12:00)",
+               "Afternoon reflection (18:00)", "Evening addition (20:00)", "Summary (21:00)", "Personal archive (21:30)"],
+    },
+    "setjam_db_keys": {
+        "id": ["jam_fokus", "jam_pagi", "jam_siang", "jam_sore", "jam_malam", "jam_ringkasan", "jam_cofmed"],
+        "en": ["jam_fokus", "jam_pagi", "jam_siang", "jam_sore", "jam_malam", "jam_ringkasan", "jam_cofmed"],
+    },
+    "setjam_defaults": {
+        "id": ["06:00", "07:00", "12:00", "18:00", "20:00", "21:00", "21:30"],
+        "en": ["06:00", "07:00", "12:00", "18:00", "20:00", "21:00", "21:30"],
     },
 
     # ─── LANGUAGE COMMAND ────────────────────────────────────────────────────
@@ -574,21 +597,98 @@ STRINGS = {
         "id": "✅ Bahasa berhasil diubah ke *Bahasa Indonesia*.",
         "en": "✅ Language successfully changed to *English*.",
     },
+
+    # ─── VOW JAM PROMPTS ─────────────────────────────────────────────────────
+
+    "vow_jam_prompt": {
+        "id": (
+            "⏰ *Atur Jam Notifikasi Sumpah — Slot {n} dari 6*\n\n"
+            "*{nama_slot}*\n"
+            "Jam saat ini: `{jam_sekarang}`\n\n"
+            "Ketik jam baru dalam format *HH:MM*, atau ketuk *Lewati*."
+        ),
+        "en": (
+            "⏰ *Set Vow Notification Times — Slot {n} of 6*\n\n"
+            "*{nama_slot}*\n"
+            "Current time: `{jam_sekarang}`\n\n"
+            "Type the new time in *HH:MM* format, or tap *Skip*."
+        ),
+    },
+    "vow_jam_slot_names": {
+        "id": ["Slot 1 (07:00)", "Slot 2 (09:30)", "Slot 3 (12:00)", "Slot 4 (14:30)", "Slot 5 (17:00)", "Slot 6 (19:30)"],
+        "en": ["Slot 1 (07:00)", "Slot 2 (09:30)", "Slot 3 (12:00)", "Slot 4 (14:30)", "Slot 5 (17:00)", "Slot 6 (19:30)"],
+    },
+    "vow_jam_selesai": {
+        "id": "✅ *Jam sumpah tersimpan!*\n\n{ringkasan}\n\n_Perubahan berlaku mulai besok._ 🙏",
+        "en": "✅ *Vow times saved!*\n\n{ringkasan}\n\n_Changes take effect from tomorrow._ 🙏",
+    },
+}
+
+# ─── COMMAND NAMES PER LANGUAGE ──────────────────────────────────────────────
+
+COMMANDS = {
+    "id": {
+        "start":       "start",
+        "help":        "help",
+        "kebajikan":   "kebajikan",
+        "refleksi":    "refleksi",
+        "ganti":       "ganti",
+        "tambahan":    "tambahan",
+        "laporan":     "laporan",
+        "level":       "level",
+        "language":    "language",
+        "setjam":      "setjam",
+    },
+    "en": {
+        "start":       "start",
+        "help":        "help",
+        "kebajikan":   "virtue",
+        "refleksi":    "reflect",
+        "ganti":       "change",
+        "tambahan":    "add",
+        "laporan":     "report",
+        "level":       "level",
+        "language":    "language",
+        "setjam":      "settime",
+    },
+}
+
+TIMEZONE_MAP = {
+    "WIB":  "Asia/Jakarta",
+    "WITA": "Asia/Makassar",
+    "WIT":  "Asia/Jayapura",
+    "SGT":  "Asia/Singapore",
+    "MYT":  "Asia/Kuala_Lumpur",
+    "IST":  "Asia/Kolkata",
+    "AEST": "Australia/Sydney",
+    "GMT":  "UTC",
+    "CET":  "Europe/Paris",
+    "EST":  "America/New_York",
+    "PST":  "America/Los_Angeles",
 }
 
 
 def T(key: str, lang: str, **kwargs) -> str:
-    """
-    Translate a key to the user's language.
-    lang: 'id' or 'en' (defaults to 'id' if unknown)
-    kwargs: format variables substituted into the string
-    """
     lang = lang if lang in ("id", "en") else "id"
     entry = STRINGS.get(key, {})
     text = entry.get(lang, entry.get("id", f"[{key}]"))
+    # Inject localized command names
+    cmds = COMMANDS.get(lang, COMMANDS["id"])
+    kwargs.setdefault("cmd_kebajikan", cmds["kebajikan"])
+    kwargs.setdefault("cmd_refleksi",  cmds["refleksi"])
+    kwargs.setdefault("cmd_ganti",     cmds["ganti"])
+    kwargs.setdefault("cmd_tambahan",  cmds["tambahan"])
+    kwargs.setdefault("cmd_laporan",   cmds["laporan"])
+    kwargs.setdefault("cmd_level",     cmds["level"])
+    kwargs.setdefault("cmd_help",      cmds["help"])
     if kwargs:
         try:
             text = text.format(**kwargs)
         except KeyError:
             pass
     return text
+
+
+def cmd(key: str, lang: str) -> str:
+    """Return the command name for a given key and language."""
+    return COMMANDS.get(lang, COMMANDS["id"]).get(key, key)

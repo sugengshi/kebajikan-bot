@@ -44,7 +44,15 @@ async def init_db():
                 rotasi_index    INTEGER DEFAULT 0,
                 onboarding_selesai INTEGER DEFAULT 0,
                 bahasa      TEXT DEFAULT 'id',
+                timezone    TEXT DEFAULT 'Asia/Jakarta',
                 join_date   DATE,
+                jam_fokus   TEXT DEFAULT '06:00',
+                jam_pagi    TEXT DEFAULT '07:00',
+                jam_siang   TEXT DEFAULT '12:00',
+                jam_sore    TEXT DEFAULT '18:00',
+                jam_malam   TEXT DEFAULT '20:00',
+                jam_ringkasan TEXT DEFAULT '21:00',
+                jam_cofmed  TEXT DEFAULT '21:30',
                 created_at  TIMESTAMPTZ DEFAULT NOW()
             )
         """)
@@ -84,12 +92,23 @@ async def init_db():
             )
         """)
         # Migrations — add new columns to existing tables safely
-        await conn.execute("""
-            ALTER TABLE users ADD COLUMN IF NOT EXISTS bahasa TEXT DEFAULT 'id'
-        """)
-        await conn.execute("""
-            ALTER TABLE users ADD COLUMN IF NOT EXISTS join_date DATE
-        """)
+        for col, default in [
+            ("bahasa",        "'id'"),
+            ("timezone",      "'Asia/Jakarta'"),
+            ("join_date",     "NULL"),
+            ("vow_times",     "'07:00 09:30 12:00 14:30 17:00 19:30'"),
+            ("jam_fokus",     "'06:00'"),
+            ("jam_pagi",      "'07:00'"),
+            ("jam_siang",     "'12:00'"),
+            ("jam_sore",      "'18:00'"),
+            ("jam_malam",     "'20:00'"),
+            ("jam_ringkasan", "'21:00'"),
+            ("jam_cofmed",    "'21:30'"),
+        ]:
+            try:
+                await conn.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} TEXT DEFAULT {default}")
+            except Exception:
+                pass  # column already exists with different type
 
         # Indexes for common query patterns
         await conn.execute("""
