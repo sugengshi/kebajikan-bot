@@ -46,7 +46,11 @@ logger = logging.getLogger(__name__)
     SETJAM_SEQUENTIAL,
     PILIH_REFLEKSI,
     PILIH_SESI_REFLEKSI,
-) = range(17)
+    SUMPAH_REFLEKSI_POSITIF,
+    SUMPAH_REFLEKSI_NEGATIF,
+    SUMPAH_REFLEKSI_RENCANA,
+    PILIH_HARI_ROTASI,
+) = range(21)
 
 SETJAM_DB_KEYS    = ["jam_fokus","jam_pagi","jam_siang","jam_sore","jam_malam","jam_ringkasan","jam_cofmed"]
 SETJAM_DEFAULTS   = ["06:00","07:00","12:00","18:00","20:00","21:00","21:30"]
@@ -467,49 +471,99 @@ async def _tampilkan_pilihan_sumpah(message, context, lang: str, db_user: dict):
 
 
 async def pilih_sumpah_slot_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """User selected a vow slot from the schedule — send its reflection prompt."""
+    """User selected a vow slot — start 3-question reflection flow."""
     query = update.callback_query
     await query.answer()
-    lang = await _lang(query.from_user.id, context)
+    user_id = query.from_user.id
+    lang = await _lang(user_id, context)
     slot_index = int(query.data.replace("sumpah_slot_", ""))
 
     vows = context.user_data.get("sumpah_vows_today", [])
     times = context.user_data.get("sumpah_times_today", [])
-    level = context.user_data.get("sumpah_level", "advanced")
+    level = context.user_data.get("sumpah_level", "")
+
+    # Rebuild from DB if context was lost (e.g. bot restart)
+    if not vows or not level:
+        db_user = await get_user(user_id)
+        if not db_user:
+            await query.message.reply_text(T("silakan_start", lang))
+            return ConversationHandler.END
+        level = db_user.get("level", "advanced")
+        from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
+                               ADV_TIMES, SA_TIMES)
+        from datetime import date as dt_date
+        join_date_raw = db_user.get("join_date")
+        today = dt_date.today()
+        jd = join_date_raw if (join_date_raw and isinstance(join_date_raw, dt_date)) else today
+        day_number = (today - jd).days + 1
+        vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
+        times = ADV_TIMES if level == "advanced" else SA_TIMES
+        context.user_data["sumpah_vows_today"] = vows
+        context.user_data["sumpah_times_today"] = times
+        context.user_data["sumpah_level"] = level
 
     if slot_index >= len(vows):
         await query.message.reply_text(T("silakan_start", lang))
         return ConversationHandler.END
 
     vow = vows[slot_index]
-    jam = times[slot_index] if slot_index < len(times) else "?"
+    if isinstance(vow, list):
+        vow = vow[0]  # use first of pair for reflection
 
+    jam = times[slot_index] if slot_index < len(times) else "?"
     from data.vows import ADVANCED_VOWS, SUPER_ADVANCED_VOWS
     vow_dict = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
+    en, id_ = vow_dict.get(vow, ("?", "?"))
+    label_key = "sumpah_label_advanced" if level == "advanced" else "sumpah_label_super"
+    label = T(label_key, lang)
 
-    # Handle 264&265 pair
-    if isinstance(vow, list):
-        from utils.messages import format_vow_pair_message
-        label_key = "sumpah_label_advanced" if level == "advanced" else "sumpah_label_super"
-        label = T(label_key, lang)
-        text = _format_vow_pair_for_reflect(vow, vow_dict, label, jam, lang)
-    else:
-        en, id_ = vow_dict.get(vow, ("?", "?"))
-        vow_text = id_ if lang == "id" else en
-        label_key = "sumpah_label_advanced" if level == "advanced" else "sumpah_label_super"
-        label = T(label_key, lang)
-        sesi_word = "Sumpah" if lang == "id" else "Vow"
-        text = (
-            f"📿 *{label}*\n"
-            f"*{jam} — {sesi_word} #{vow}*\n\n"
-            f"🇬🇧 _{en}_\n\n"
-            f"🇮🇩 _{id_}_\n\n"
-            f"─────────────────────\n"
-            f"_{T('sumpah_renungan', lang)}_"
-        )
+    # Store for the 3-question flow
+    context.user_data["sumpah_vow_num"] = vow
+    context.user_data["sumpah_vow_en"] = en
+    context.user_data["sumpah_vow_id"] = id_
+    context.user_data["sumpah_vow_jam"] = jam
+    context.user_data["sumpah_vow_label"] = label
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await query.message.reply_text(text, parse_mode="Markdown")
+    await query.message.reply_text(
+        T("sumpah_refleksi_positif", lang, label=label, jam=jam, vow=vow, en=en, id_=id_),
+        parse_mode="Markdown"
+    )
+    return SUMPAH_REFLEKSI_POSITIF
+
+
+async def terima_sumpah_positif(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = await _lang(update.effective_user.id, context)
+    context.user_data["sumpah_positif"] = update.message.text
+    await update.message.reply_text(T("sumpah_refleksi_negatif", lang), parse_mode="Markdown")
+    return SUMPAH_REFLEKSI_NEGATIF
+
+
+async def terima_sumpah_negatif(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = await _lang(update.effective_user.id, context)
+    context.user_data["sumpah_negatif"] = update.message.text
+    await update.message.reply_text(T("sumpah_refleksi_rencana", lang), parse_mode="Markdown")
+    return SUMPAH_REFLEKSI_RENCANA
+
+
+async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    lang = await _lang(user_id, context)
+    vow = context.user_data.get("sumpah_vow_num", 0)
+    positif = context.user_data.get("sumpah_positif", "")
+    negatif = context.user_data.get("sumpah_negatif", "")
+    rencana = update.message.text
+    # Save as catatan using vow number as kebajikan_id, sesi = current
+    sesi = _sesi_sekarang()
+    await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
+    await update.message.reply_text(
+        T("sumpah_refleksi_konfirmasi", lang, vow=vow,
+          positif=positif, negatif=negatif, rencana=rencana),
+        parse_mode="Markdown"
+    )
+    for key in ["sumpah_positif","sumpah_negatif","sumpah_vow_num",
+                "sumpah_vow_en","sumpah_vow_id","sumpah_vow_jam","sumpah_vow_label"]:
+        context.user_data.pop(key, None)
     return ConversationHandler.END
 
 
@@ -670,8 +724,23 @@ async def cmd_ganti(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = db_user.get("bahasa", "id")
     context.user_data["lang"] = lang
     level = db_user.get("level", "pemula")
-    jumlah = LEVEL_CONFIG[level]["jumlah"]
     context.user_data["level"] = level
+
+    # Advanced/Super: offer two options — by vow number or by day number
+    if level in ("advanced", "super_advanced"):
+        context.user_data["upgrade_target"] = level
+        context.user_data["upgrade_max_vow"] = 147 if level == "advanced" else 265
+        await update.message.reply_text(
+            T("ganti_advanced_pilihan", lang),
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton(T("ganti_dari_sumpah_label", lang), callback_data="ganti_adv_sumpah")],
+                [InlineKeyboardButton(T("ganti_dari_hari_label",   lang), callback_data="ganti_adv_hari")],
+            ])
+        )
+        return PILIH_VOW_AWAL
+
+    jumlah = LEVEL_CONFIG[level]["jumlah"]
     context.user_data["kebajikan_dipilih"] = []
     await update.message.reply_text(
         T("ganti_judul", lang, jumlah=jumlah), parse_mode="Markdown",
@@ -682,6 +751,52 @@ async def cmd_ganti(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ─── /kebajikan / /virtue ────────────────────────────────────────────────────
 
+async def ganti_adv_pilihan_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle choice between change-by-vow and change-by-day."""
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+
+    if query.data == "ganti_adv_sumpah":
+        target = context.user_data.get("upgrade_target", "advanced")
+        key = "vow_awal_prompt_advanced" if target == "advanced" else "vow_awal_prompt_super"
+        await query.edit_message_text(T(key, lang), parse_mode="Markdown")
+        return PILIH_VOW_AWAL
+
+    # change-by-day
+    await query.edit_message_text(T("ganti_dari_hari_prompt", lang), parse_mode="Markdown")
+    return PILIH_HARI_ROTASI
+
+
+async def terima_hari_rotasi(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Receive day number directly and update join_date accordingly."""
+    from data.vows import day_to_start_date, get_adv_vows_for_day, get_sa_vows_for_day
+    user_id = update.effective_user.id
+    lang = await _lang(user_id, context)
+    target = context.user_data.get("upgrade_target", "advanced")
+    max_day = 147 if target == "advanced" else 44
+
+    try:
+        day_number = int(update.message.text.strip())
+        if not 1 <= day_number <= max_day:
+            raise ValueError
+    except ValueError:
+        await update.message.reply_text(T("ganti_hari_invalid", lang, max_day=max_day))
+        return PILIH_HARI_ROTASI
+
+    join_date = day_to_start_date(day_number)
+    await update_user(user_id, join_date=join_date)
+
+    jadwal = _format_vow_schedule(target, day_number, lang)
+    await update.message.reply_text(
+        T("ganti_hari_konfirmasi", lang, day_number=day_number, jadwal=jadwal),
+        parse_mode="Markdown"
+    )
+    context.user_data.pop("upgrade_target", None)
+    context.user_data.pop("upgrade_max_vow", None)
+    return ConversationHandler.END
+
+
 async def cmd_kebajikan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db_user = await get_user(user_id)
@@ -689,6 +804,40 @@ async def cmd_kebajikan(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(T("silakan_start", "id"))
         return
     lang = db_user.get("bahasa", "id")
+    level = db_user.get("level", "pemula")
+
+    # Advanced/Super Advanced: show today's vow schedule
+    if level in ("advanced", "super_advanced"):
+        from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
+                               ADVANCED_VOWS, SUPER_ADVANCED_VOWS, ADV_TIMES, SA_TIMES)
+        from datetime import date as dt_date
+        join_date_raw = db_user.get("join_date")
+        today = dt_date.today()
+        if join_date_raw:
+            jd = join_date_raw if isinstance(join_date_raw, dt_date) else today
+            day_number = (today - jd).days + 1
+        else:
+            day_number = 1
+        times = ADV_TIMES if level == "advanced" else SA_TIMES
+        vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
+        vow_dict = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
+        label_key = "sumpah_label_advanced" if level == "advanced" else "sumpah_label_super"
+        label = T(label_key, lang)
+        sesi_word = "Jadwal Sumpah Hari Ini" if lang == "id" else "Today's Vow Schedule"
+        lines = [f"📿 *{label}*\n_{sesi_word} (Day {day_number}):_\n"]
+        for t, v in zip(times, vows):
+            if isinstance(v, list):
+                nums = " & ".join(f"#{n}" for n in v)
+                lines.append(f"*{t}* — {nums}")
+            else:
+                en, id_ = vow_dict.get(v, ("?", "?"))
+                text = id_ if lang == "id" else en
+                short = text[:55] + "..." if len(text) > 55 else text
+                lines.append(f"*{t}* — *#{v}* _{short}_")
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+        return
+
+    # Standard levels
     fokus = db_user.get("kebajikan_fokus", [])
     if not fokus:
         await update.message.reply_text(T("kebajikan_belum_ada", lang))
@@ -1139,6 +1288,10 @@ def build_conversation_handler():
             ],
             PILIH_VOW_AWAL: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, terima_vow_awal),
+                CallbackQueryHandler(ganti_adv_pilihan_cb, pattern="^ganti_adv_"),
+            ],
+            PILIH_HARI_ROTASI: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_hari_rotasi),
             ],
             PILIH_JAM_VOW: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, terima_jam_vow),
@@ -1155,6 +1308,15 @@ def build_conversation_handler():
             ],
             PILIH_SESI_REFLEKSI: [
                 CallbackQueryHandler(pilih_sesi_refleksi_cb, pattern="^refleksi_sesi_"),
+            ],
+            SUMPAH_REFLEKSI_POSITIF: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_sumpah_positif),
+            ],
+            SUMPAH_REFLEKSI_NEGATIF: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_sumpah_negatif),
+            ],
+            SUMPAH_REFLEKSI_RENCANA: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_sumpah_rencana),
             ],
         },
         fallbacks=[CommandHandler("start", start)],

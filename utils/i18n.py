@@ -285,6 +285,10 @@ STRINGS = {
         "en": "Please start with /start.",
     },
     "refleksi_pilih_sumpah": {
+        "id": "📿 *Jadwal sumpah Anda hari ini:*\n\n_Ketuk sumpah yang ingin Anda renungkan._",
+        "en": "📿 *Your vow schedule for today:*\n\n_Tap the vow you want to contemplate._",
+    },
+    "refleksi_pilih_sumpah_UNUSED": {
         "id": (
             "📿 *Pilih sumpah yang ingin Anda renungkan:*\n\n"
             "_(Ini adalah jadwal sumpah Anda hari ini)_"
@@ -393,6 +397,120 @@ STRINGS = {
 
     "sumpah_label_advanced": {"id": "Sumpah Bodhisattva 🪷", "en": "Bodhisattva Vow 🪷"},
     "sumpah_label_super":    {"id": "Sumpah Tantra 💎",       "en": "Tantric Vow 💎"},
+    "sumpah_refleksi_positif": {
+        "id": (
+            "📿 *{label}*\n"
+            "*{jam} — Sumpah #{vow}*\n\n"
+            "🇬🇧 _{en}_\n\n"
+            "🇮🇩 _{id_}_\n\n"
+            "─────────────────────\n\n"
+            "✅ *Pertanyaan 1 dari 3*\n\n"
+            "Selama 24 jam terakhir, adakah perbuatan, perkataan, atau pikiran yang "
+            "SESUAI dengan sumpah ini?\n\n"
+            "_Bahkan niat pun sudah menjadi bibit._"
+        ),
+        "en": (
+            "📿 *{label}*\n"
+            "*{jam} — Vow #{vow}*\n\n"
+            "🇬🇧 _{en}_\n\n"
+            "🇮🇩 _{id_}_\n\n"
+            "─────────────────────\n\n"
+            "✅ *Question 1 of 3*\n\n"
+            "In the last 24 hours, were there any actions, words, or thoughts "
+            "IN LINE with this vow?\n\n"
+            "_Even an intention is already a seed._"
+        ),
+    },
+    "sumpah_refleksi_negatif": {
+        "id": (
+            "⚠️ *Pertanyaan 2 dari 3*\n\n"
+            "Adakah perbuatan, perkataan, atau pikiran yang TIDAK SESUAI dengan sumpah ini "
+            "dalam 24 jam terakhir?\n\n"
+            "_Jawab dengan jujur — ini bukan untuk dihakimi, tapi untuk disadari._"
+        ),
+        "en": (
+            "⚠️ *Question 2 of 3*\n\n"
+            "Were there any actions, words, or thoughts OUT OF LINE with this vow "
+            "in the last 24 hours?\n\n"
+            "_Answer honestly — this is not for judgment, but for awareness._"
+        ),
+    },
+    "sumpah_refleksi_rencana": {
+        "id": (
+            "🌱 *Pertanyaan 3 dari 3*\n\n"
+            "Untuk menyeimbangkan bibit negatif di atas, apa rencana konkret yang "
+            "akan Anda lakukan dalam 24 jam ke depan?\n\n"
+            "_Satu tindakan kecil pun sudah cukup._"
+        ),
+        "en": (
+            "🌱 *Question 3 of 3*\n\n"
+            "To balance the negative seeds above, what concrete plan will "
+            "you carry out in the next 24 hours?\n\n"
+            "_Even one small action is enough._"
+        ),
+    },
+    "sumpah_refleksi_konfirmasi": {
+        "id": (
+            "✨ *Catatan Sumpah #{vow} tersimpan:*\n\n"
+            "✅ *Sesuai:* {positif}\n\n"
+            "⚠️ *Perlu diseimbangkan:* {negatif}\n\n"
+            "🌱 *Rencana:* {rencana}\n\n"
+            "Terima kasih! 🙏"
+        ),
+        "en": (
+            "✨ *Vow #{vow} notes saved:*\n\n"
+            "✅ *In line:* {positif}\n\n"
+            "⚠️ *To balance:* {negatif}\n\n"
+            "🌱 *Plan:* {rencana}\n\n"
+            "Thank you! 🙏"
+        ),
+    },
+    "ganti_advanced_pilihan": {
+        "id": (
+            "🔄 *Ganti Posisi Rotasi*\n\n"
+            "Pilih cara mengganti posisi Anda dalam siklus sumpah:"
+        ),
+        "en": (
+            "🔄 *Change Rotation Position*\n\n"
+            "Choose how you want to change your position in the vow cycle:"
+        ),
+    },
+    "ganti_dari_sumpah_label": {"id": "📿 Dari nomor sumpah", "en": "📿 From vow number"},
+    "ganti_dari_hari_label":   {"id": "📅 Dari nomor hari",   "en": "📅 From day number"},
+    "ganti_dari_hari_prompt": {
+        "id": (
+            "📅 *Masukkan nomor hari dalam siklus:*\n\n"
+            "Advanced: 1–147\n"
+            "Super Advanced: 1–44\n\n"
+            "_Contoh: ketik *10* untuk memulai dari hari ke-10._"
+        ),
+        "en": (
+            "📅 *Enter the day number in the cycle:*\n\n"
+            "Advanced: 1–147\n"
+            "Super Advanced: 1–44\n\n"
+            "_Example: type *10* to start from day 10._"
+        ),
+    },
+    "ganti_hari_invalid": {
+        "id": "⚠️ Masukkan angka antara 1 dan {max_day}. Coba lagi:",
+        "en": "⚠️ Please enter a number between 1 and {max_day}. Try again:",
+    },
+    "ganti_hari_konfirmasi": {
+        "id": (
+            "✅ *Posisi rotasi diperbarui!*\n\n"
+            "Hari ke-*{day_number}* dalam siklus.\n\n"
+            "*Jadwal sumpah hari ini:*\n{jadwal}"
+        ),
+        "en": (
+            "✅ *Rotation position updated!*\n\n"
+            "Day *{day_number}* in the cycle.\n\n"
+            "*Today's vow schedule:*\n{jadwal}"
+        ),
+    },
+    "kebajikan_belum_ada_ganti": {
+        "id": "Gunakan /{cmd_ganti} untuk memilih kebajikan fokus.",
+        "en": "Use /{cmd_ganti} to choose a virtue focus.",
+    },
     "sumpah_renungan": {
         "id": "_Renungkan sumpah ini dalam setiap tindakan, perkataan, dan pikiran Anda hari ini._ 🙏",
         "en": "_Contemplate this vow in every action, word, and thought today._ 🙏",
