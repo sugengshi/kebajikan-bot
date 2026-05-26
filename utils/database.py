@@ -109,11 +109,18 @@ async def init_db():
         except Exception:
             pass
         try:
-            # Add correct 4-column constraint
+            # Add correct 4-column constraint (drop first to be safe)
             await conn.execute("""
-                ALTER TABLE catatan_harian
-                ADD CONSTRAINT IF NOT EXISTS catatan_harian_user_tanggal_sesi_vow_key
-                UNIQUE (user_id, tanggal, sesi, kebajikan_id)
+                DO $$ BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint
+                        WHERE conname = 'catatan_harian_user_tanggal_sesi_vow_key'
+                    ) THEN
+                        ALTER TABLE catatan_harian
+                        ADD CONSTRAINT catatan_harian_user_tanggal_sesi_vow_key
+                        UNIQUE (user_id, tanggal, sesi, kebajikan_id);
+                    END IF;
+                END $$;
             """)
         except Exception:
             pass  # already exists
@@ -245,7 +252,7 @@ async def get_catatan_hari_ini(user_id: int) -> list:
         rows = await conn.fetch("""
             SELECT * FROM catatan_harian
             WHERE user_id = $1 AND tanggal = $2
-            ORDER BY sesi
+            ORDER BY created_at
         """, user_id, tanggal)
         return [dict(r) for r in rows]
 

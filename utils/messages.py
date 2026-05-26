@@ -154,7 +154,7 @@ def format_ringkasan_positif(catatan_list: list, tambahan_list: list, lang: str 
     return "\n".join(lines)
 
 
-def _get_entry_header(c: dict, lang: str) -> str:
+def _get_entry_header(c: dict, lang: str, hide_sesi_label: bool = False) -> str:
     """Return display header for a catatan entry (works for both slot_ and standard sesi)."""
     sesi = c.get("sesi", "")
     k_id = c.get("kebajikan_id", 0)
@@ -175,8 +175,16 @@ def _get_entry_header(c: dict, lang: str) -> str:
         if lang == "en" and k:
             nama = k.get("nama_en", nama)
         emoji = k["emoji"] if k else "•"
+        if hide_sesi_label:
+            # Advanced/Super: don't show Morning/Midday/Afternoon label
+            return f"{emoji} *{nama}*"
         sesi_label = _sesi_label(sesi, lang)
         return f"*{sesi_label}* — {emoji} _{nama}_"
+
+
+def _is_advanced_list(catatan_list: list) -> bool:
+    """Return True if the list contains any vow (slot_) entries."""
+    return any(c.get("sesi", "").startswith("slot_") for c in catatan_list)
 
 
 def format_laporan_ringkas(catatan_list: list, tambahan_list: list, lang: str = "id") -> str:
@@ -201,11 +209,11 @@ def format_laporan_ringkas(catatan_list: list, tambahan_list: list, lang: str = 
         if not positif and not rencana:
             continue
         ada_isi = True
-        header = _get_entry_header(c, lang)
+        hide = _is_advanced_list(catatan_list)
+        header = _get_entry_header(c, lang, hide_sesi_label=hide)
         lines.append(header)
         if positif:
-            plus_label = "✅" if lang == "en" else "✅"
-            lines.append(f"{plus_label} {positif}")
+            lines.append(f"✅ {positif}")
         if rencana:
             todo_label = "🌱 *Plan:* " if lang == "en" else "🌱 *Rencana:* "
             lines.append(f"{todo_label}{rencana}")
@@ -251,8 +259,9 @@ def format_laporan_lengkap(catatan_list: list, tambahan_list: list, lang: str = 
     neg_label  = T("arsip_negatif_label", lang)
     plan_label = T("arsip_rencana_label", lang)
 
+    hide = _is_advanced_list(catatan_list)
     for c in catatan_list:
-        header = _get_entry_header(c, lang)
+        header = _get_entry_header(c, lang, hide_sesi_label=hide)
         lines.append(header)
         positif = c.get("catatan_positif", "").strip()
         negatif = c.get("catatan_negatif", "").strip()
