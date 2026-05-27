@@ -218,12 +218,15 @@ def _get_entry_header(c: dict, lang: str, hide_sesi_label: bool = False, vow_tim
         return f"*{sesi_label}* — {emoji} _{nama}_"
 
 
-def _sort_key(c: dict) -> str:
+def _sort_key(c: dict, vow_time_map: dict = None) -> str:
     """Return sortable time string for a catatan entry."""
     sesi = c.get("sesi", "")
+    k_id = c.get("kebajikan_id", 0)
     if sesi.startswith("slot_"):
-        return sesi.replace("slot_", "")  # "07:00", "09:30", etc.
-    # Map standard sesi to approximate times for sorting
+        return sesi.replace("slot_", "")
+    # Use vow_time_map if available (most accurate)
+    if vow_time_map and k_id in vow_time_map:
+        return vow_time_map[k_id]
     return {"pagi": "06:00", "siang": "11:00", "sore": "17:00"}.get(sesi, "99:99")
 
 
@@ -246,7 +249,7 @@ def format_laporan_ringkas(catatan_list: list, tambahan_list: list, lang: str = 
         penutup = "_Tap /report again to see all entries in full._ 🙏"
 
     lines = [title]
-    catatan_list = sorted(catatan_list, key=_sort_key)
+    catatan_list = sorted(catatan_list, key=lambda c: _sort_key(c, vow_time_map))
     ada_isi = False
 
     for c in catatan_list:
@@ -305,7 +308,7 @@ def format_laporan_lengkap(catatan_list: list, tambahan_list: list, lang: str = 
     neg_label  = T("arsip_negatif_label", lang)
     plan_label = T("arsip_rencana_label", lang)
 
-    catatan_list = sorted(catatan_list, key=_sort_key)
+    catatan_list = sorted(catatan_list, key=lambda c: _sort_key(c, vow_time_map))
     hide = _is_advanced_list(catatan_list)
     for c in catatan_list:
         header = _get_entry_header(c, lang, hide_sesi_label=hide, vow_time_map=vow_time_map)
