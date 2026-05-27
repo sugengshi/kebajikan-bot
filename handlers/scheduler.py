@@ -57,14 +57,16 @@ def init_scheduler(bot: Bot) -> AsyncIOScheduler:
     _scheduler = AsyncIOScheduler(timezone=WIB)
 
     _scheduler.add_job(
-        lambda: kirim_notifikasi_harian(bot),
+        kirim_notifikasi_harian,
         CronTrigger(minute="0,30", timezone=WIB),
+        args=[bot],
         id="notifikasi_harian",
         replace_existing=True,
     )
     _scheduler.add_job(
-        lambda: kirim_pengingat(bot),
+        kirim_pengingat,
         CronTrigger(minute="5,35", timezone=WIB),
+        args=[bot],
         id="pengingat",
         replace_existing=True,
     )
