@@ -511,6 +511,30 @@ STRINGS = {
         "id": "Gunakan /{cmd_ganti} untuk memilih kebajikan fokus.",
         "en": "Use /{cmd_ganti} to choose a virtue focus.",
     },
+    "sumpah_semua_selesai": {
+        "id": (
+            "🎉 *Semua sumpah hari ini sudah direfleksikan!*\n\n"
+            "Apakah Anda ingin menulis ulang salah satu sumpah?"
+        ),
+        "en": (
+            "🎉 *All of today's vows have been reflected on!*\n\n"
+            "Would you like to rewrite any vow?"
+        ),
+    },
+    "sumpah_tulis_ulang_ya":   {"id": "✏️ Ya, tulis ulang",  "en": "✏️ Yes, rewrite one"},
+    "sumpah_tulis_ulang_tidak":{"id": "✅ Tidak, sudah cukup","en": "✅ No, I'm done"},
+    "sumpah_tulis_ulang_pilih":{
+        "id": "📿 *Pilih sumpah yang ingin ditulis ulang:*",
+        "en": "📿 *Choose the vow you want to rewrite:*",
+    },
+    "sumpah_sudah_semua_tidak":{
+        "id": "✅ Baik! Refleksi hari ini selesai. Kerja bagus! 🙏",
+        "en": "✅ Done! Today's reflection is complete. Well done! 🙏",
+    },
+    "sumpah_berikutnya": {
+        "id": "📿 *Sumpah berikutnya yang belum direfleksikan:*",
+        "en": "📿 *Next vow not yet reflected on:*",
+    },
     "sumpah_mulai_refleksi_label": {
         "id": "✍️ Tulis refleksi sumpah ini",
         "en": "✍️ Reflect on this vow",

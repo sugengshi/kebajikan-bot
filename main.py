@@ -10,7 +10,7 @@ from utils.database import init_db, get_user, update_user
 from handlers.conversation import (
     build_conversation_handler, cmd_kebajikan, cmd_help,
     cmd_laporan, cmd_level, cmd_language,
-    callback_pagi_ganti, cmd_setjam, laporan_mode_cb
+    callback_pagi_ganti, cmd_setjam, laporan_mode_cb, rewrite_vow_cb
 )
 from handlers.scheduler import init_scheduler
 
@@ -121,6 +121,7 @@ def main():
     # Callbacks
     app.add_handler(CallbackQueryHandler(callback_pagi_ganti, pattern="^pagi_ganti_"))
     app.add_handler(CallbackQueryHandler(laporan_mode_cb, pattern="^laporan_"))
+    app.add_handler(CallbackQueryHandler(rewrite_vow_cb, pattern="^rewrite_vow_"))
 
     logger.info("Bot berjalan...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)

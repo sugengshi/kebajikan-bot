@@ -484,6 +484,26 @@ async def reflect_vow_from_scheduler_cb(update: Update, context: ContextTypes.DE
     return SUMPAH_REFLEKSI_POSITIF
 
 
+async def rewrite_vow_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle yes/no from the 'all done, want to rewrite?' prompt."""
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+    user_id = query.from_user.id
+
+    if query.data == "rewrite_vow_no":
+        await query.edit_message_text(T("sumpah_sudah_semua_tidak", lang), parse_mode="Markdown")
+        return ConversationHandler.END
+
+    # Yes — show the full vow schedule to pick from (same as /reflect)
+    db_user = await get_user(user_id)
+    if not db_user:
+        await query.message.reply_text(T("silakan_start", lang))
+        return ConversationHandler.END
+    await query.edit_message_reply_markup(reply_markup=None)
+    return await _tampilkan_pilihan_sumpah(query.message, context, lang, db_user)
+
+
 async def _tampilkan_pilihan_sumpah(message, context, lang: str, db_user: dict):
     """For Advanced/Super Advanced: show today's vow schedule as selectable buttons."""
     from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
@@ -1354,6 +1374,7 @@ def build_conversation_handler():
             CommandHandler("refleksi", cmd_refleksi),
             CommandHandler("reflect",  cmd_refleksi),
             CallbackQueryHandler(reflect_vow_from_scheduler_cb, pattern="^reflect_vow_"),
+            CallbackQueryHandler(rewrite_vow_cb, pattern="^rewrite_vow_"),
             CommandHandler("ganti",    cmd_ganti),
             CommandHandler("change",   cmd_ganti),
             CommandHandler("tambahan", cmd_tambahan),

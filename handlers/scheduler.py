@@ -191,15 +191,58 @@ async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict, vo
         label = T("sumpah_label_super", lang)
         vow_dict = SUPER_ADVANCED_VOWS
 
-    # Format message — handle the 264&265 pair on SA day 44 last slot
-    if isinstance(vow, list):
-        text = format_vow_pair_message(vow, vow_dict, label)
-        vow_num = vow[0]
-    else:
-        text = format_vow_message(vow, vow_dict, label)
-        vow_num = vow
+    # Check which vow slots are already filled today
+    from utils.database import get_catatan_hari_ini as _get_cat
+    catatan_today = await _get_cat(user_id)
+    filled_vows = {c["kebajikan_id"] for c in catatan_today}
+    filled_sesi = {c["sesi"] for c in catatan_today}
 
-    # Add inline button so user can tap to start reflection directly
+    def _slot_filled(v, si):
+        """Return True if this slot's vow or slot sesi is already filled."""
+        sesi_key = f"slot_{times[si]}"
+        vow_id = v[0] if isinstance(v, list) else v
+        return sesi_key in filled_sesi or vow_id in filled_vows
+
+    # If this slot is already filled, find the next unfilled one
+    if _slot_filled(vow, slot_index):
+        # Search remaining slots for an unfilled one
+        next_vow = None
+        next_slot = None
+        next_jam = None
+        for si in range(slot_index + 1, len(vows_today)):
+            if not _slot_filled(vows_today[si], si):
+                next_vow = vows_today[si]
+                next_slot = si
+                next_jam = times[si]
+                break
+
+        if next_vow is None:
+            # All remaining vows are filled — ask if they want to rewrite
+            await _send_all_done(bot, user_id, lang, vows_today, times, vow_dict, label)
+            return
+
+        # Send the next unfilled vow instead
+        vow = next_vow
+        slot_index = next_slot
+        jam = next_jam
+        if isinstance(vow, list):
+            vow_intro = T("sumpah_berikutnya", lang) + "\n\n"
+            text = vow_intro + format_vow_pair_message(vow, vow_dict, label)
+            vow_num = vow[0]
+        else:
+            vow_intro = T("sumpah_berikutnya", lang) + "\n\n"
+            text = vow_intro + format_vow_message(vow, vow_dict, label)
+            vow_num = vow
+    else:
+        # Normal case — send this slot's vow
+        if isinstance(vow, list):
+            text = format_vow_pair_message(vow, vow_dict, label)
+            vow_num = vow[0]
+        else:
+            text = format_vow_message(vow, vow_dict, label)
+            vow_num = vow
+
+    # Add inline reflect button
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup
     slot_index_str = str(slot_index)
     reflect_label = T("sumpah_mulai_refleksi_label", lang)
@@ -208,6 +251,35 @@ async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict, vo
     ]])
 
     await bot.send_message(chat_id=user_id, text=text, parse_mode="Markdown", reply_markup=kb)
+
+
+async def _send_all_done(bot, user_id: int, lang: str, vows_today: list, times: list,
+                         vow_dict: dict, label: str):
+    """Send 'all done' message with option to rewrite a vow."""
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    # Build rewrite selection buttons
+    rows = []
+    for i, (t, v) in enumerate(zip(times, vows_today)):
+        vow_id = v[0] if isinstance(v, list) else v
+        en_t, id_t = vow_dict.get(vow_id, ("?", "?"))
+        short = (id_t if lang == "id" else en_t)[:40] + "..."
+        rows.append([InlineKeyboardButton(
+            f"{t} — #{vow_id} {short}",
+            callback_data=f"reflect_vow_{i}_{t.replace(':','')}"
+        )])
+
+    kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(T("sumpah_tulis_ulang_ya",    lang), callback_data="rewrite_vow_yes"),
+            InlineKeyboardButton(T("sumpah_tulis_ulang_tidak", lang), callback_data="rewrite_vow_no"),
+        ]
+    ])
+    await bot.send_message(
+        chat_id=user_id,
+        text=T("sumpah_semua_selesai", lang),
+        parse_mode="Markdown",
+        reply_markup=kb
+    )
 
 
 # ─── INDIVIDUAL SEND FUNCTIONS ───────────────────────────────────────────────
