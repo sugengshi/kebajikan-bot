@@ -84,6 +84,7 @@ async def kirim_notifikasi_harian(bot: Bot):
     now_utc = datetime.now(pytz.utc)
     users = await get_all_users()
     total = len(users)
+    logger.info(f"[scheduler] firing for {total} users at UTC {now_utc.strftime('%H:%M')}")
 
     tasks = []
     for i, u in enumerate(users):
@@ -114,6 +115,8 @@ async def _dispatch(bot: Bot, user_id: int, u: dict, jam: str):
                 vow_times = custom_times.split()
             else:
                 vow_times = ADV_TIMES if level == "advanced" else SA_TIMES
+            tz_name = u.get("timezone") or "Asia/Jakarta"
+            logger.info(f"[dispatch] user={user_id} level={level} tz={tz_name} jam={jam!r} vow_times={vow_times}")
             if jam in vow_times:
                 await kirim_sumpah(bot, user_id, level, jam, u, vow_times)
                 return
