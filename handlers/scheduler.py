@@ -349,22 +349,49 @@ async def kirim_malam(bot: Bot, user_id: int):
 
 async def kirim_ringkasan(bot: Bot, user_id: int):
     """21:00 — tampilkan semua perbuatan baik hari ini (positif saja)."""
-    lang = await get_user_lang(user_id)
+    from utils.messages import build_vow_time_map
+    from datetime import date as dt_date
+    db_user = await get_user(user_id)
+    lang = (db_user.get("bahasa", "id") or "id") if db_user else "id"
     catatan = await get_catatan_hari_ini(user_id)
     tambahan = await get_tambahan_malam(user_id)
+
+    vow_time_map = {}
+    if db_user:
+        level = db_user.get("level", "pemula")
+        if level in ("advanced", "super_advanced"):
+            join_date_raw = db_user.get("join_date")
+            today = datetime.now(WIB).date()
+            jd = join_date_raw if (join_date_raw and isinstance(join_date_raw, dt_date)) else today
+            day_number = (today - jd).days + 1
+            vow_time_map = build_vow_time_map(level, day_number)
+
     await bot.send_message(
         chat_id=user_id,
-        text=format_ringkasan_positif(catatan, tambahan, lang),
+        text=format_ringkasan_positif(catatan, tambahan, lang, vow_time_map=vow_time_map),
         parse_mode="Markdown"
     )
 
 
 async def kirim_arsip(bot: Bot, user_id: int):
     """21:30 — arsip pribadi lengkap (semua entri refleksi + tambahan)."""
+    from utils.messages import build_vow_time_map
+    from datetime import date as dt_date
     catatan = await get_catatan_hari_ini(user_id)
     tambahan = await get_tambahan_malam(user_id)
     db_user = await get_user(user_id)
     nama = db_user.get("username", "") if db_user else ""
+    lang = (db_user.get("bahasa", "id") or "id") if db_user else "id"
+
+    vow_time_map = {}
+    if db_user:
+        level = db_user.get("level", "pemula")
+        if level in ("advanced", "super_advanced"):
+            join_date_raw = db_user.get("join_date")
+            today = datetime.now(WIB).date()
+            jd = join_date_raw if (join_date_raw and isinstance(join_date_raw, dt_date)) else today
+            day_number = (today - jd).days + 1
+            vow_time_map = build_vow_time_map(level, day_number)
 
     if not catatan and not tambahan:
         await bot.send_message(
@@ -380,7 +407,7 @@ async def kirim_arsip(bot: Bot, user_id: int):
 
     await bot.send_message(
         chat_id=user_id,
-        text=format_arsip_pribadi(catatan, tambahan, nama),
+        text=format_arsip_pribadi(catatan, tambahan, lang, nama, vow_time_map=vow_time_map),
         parse_mode="Markdown"
     )
 

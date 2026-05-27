@@ -122,10 +122,11 @@ def format_pertanyaan_tambahan_malam(lang: str = "id") -> str:
     return T("tambahan_malam_prompt", lang)
 
 
-def format_ringkasan_positif(catatan_list: list, tambahan_list: list, lang: str = "id") -> str:
+def format_ringkasan_positif(catatan_list: list, tambahan_list: list, lang: str = "id", vow_time_map: dict = None) -> str:
     now = datetime.now(WIB).strftime("%d %B %Y")
     lines = [T("ringkasan_judul", lang, tanggal=now)]
 
+    catatan_list = sorted(catatan_list, key=lambda c: _sort_key(c, vow_time_map))
     ada_isi = False
     for c in catatan_list:
         positif = c.get("catatan_positif", "").strip()
@@ -335,13 +336,14 @@ def format_laporan_lengkap(catatan_list: list, tambahan_list: list, lang: str = 
     return "\n".join(lines)
 
 
-def format_arsip_pribadi(catatan_list: list, tambahan_list: list, lang: str = "id", user_nama: str = "") -> str:
+def format_arsip_pribadi(catatan_list: list, tambahan_list: list, lang: str = "id", user_nama: str = "", vow_time_map: dict = None) -> str:
     now = datetime.now(WIB).strftime("%d %B %Y")
     sapaan = f" — {user_nama}" if user_nama else ""
 
     if not catatan_list and not tambahan_list:
         return T("arsip_kosong", lang)
 
+    catatan_list = sorted(catatan_list, key=lambda c: _sort_key(c, vow_time_map))
     lines = [T("arsip_judul", lang, sapaan=sapaan, tanggal=now)]
 
     for c in catatan_list:

@@ -21,6 +21,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def error_handler(update: object, context) -> None:
+    """Log all unhandled exceptions so they surface in Railway logs."""
+    logger.error("Unhandled exception while processing update", exc_info=context.error)
+
+
 async def post_init(application):
     """Initialize DB and scheduler after bot starts."""
     await init_db()
@@ -122,6 +127,8 @@ def main():
     app.add_handler(CallbackQueryHandler(callback_pagi_ganti, pattern="^pagi_ganti_"))
     app.add_handler(CallbackQueryHandler(laporan_mode_cb, pattern="^laporan_"))
     app.add_handler(CallbackQueryHandler(rewrite_vow_cb, pattern="^rewrite_vow_"))
+
+    app.add_error_handler(error_handler)
 
     logger.info("Bot berjalan...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
