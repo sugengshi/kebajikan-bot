@@ -226,8 +226,11 @@ async def update_user(user_id: int, **kwargs):
 async def get_all_users() -> list:
     async with _pool_conn() as conn:
         rows = await conn.fetch("""
-            SELECT user_id, kebajikan_fokus, jam_pagi, jam_siang, jam_sore,
-                   jam_malam, jam_cofmed, onboarding_selesai, level, rotasi_index
+            SELECT user_id, username, kebajikan_fokus,
+                   jam_fokus, jam_pagi, jam_siang, jam_sore,
+                   jam_malam, jam_ringkasan, jam_cofmed,
+                   onboarding_selesai, level, rotasi_index,
+                   bahasa, timezone, join_date, vow_times
             FROM users
             WHERE onboarding_selesai = 1
         """)

@@ -78,22 +78,26 @@ def init_scheduler(bot: Bot) -> AsyncIOScheduler:
 
 async def kirim_notifikasi_harian(bot: Bot):
     """
-    Runs every hour on the :00. Checks which notification each user
-    should receive, then fans out with jitter to stay under Telegram's
-    30 msg/sec limit even at large scale.
+    Runs every 30 min. Checks which notification each user should receive,
+    using the user's own timezone for time comparison.
     """
-    now = datetime.now(WIB)
-    jam_sekarang = now.strftime("%H:%M")
+    now_utc = datetime.now(pytz.utc)
     users = await get_all_users()
     total = len(users)
 
     tasks = []
     for i, u in enumerate(users):
         user_id = u["user_id"]
-        coro = _dispatch(bot, user_id, u, jam_sekarang)
+        # Get user's local time in their timezone
+        tz_str = u.get("timezone") or "Asia/Jakarta"
+        try:
+            user_tz = pytz.timezone(tz_str)
+        except Exception:
+            user_tz = WIB
+        jam_user = now_utc.astimezone(user_tz).strftime("%H:%M")
+        coro = _dispatch(bot, user_id, u, jam_user)
         tasks.append(_kirim_dengan_jitter(coro, i, total))
 
-    # Fire all tasks concurrently — jitter is applied inside each task
     if tasks:
         await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -113,17 +117,17 @@ async def _dispatch(bot: Bot, user_id: int, u: dict, jam: str):
             if jam in vow_times:
                 await kirim_sumpah(bot, user_id, level, jam, u, vow_times)
                 return
-            # Still send 06:00 focus check, 21:00 ringkasan, 21:30 arsip
-            if jam == "06:00":
+            # Also send daily bookends for advanced users
+            if jam == u.get("jam_fokus", "06:00"):
                 await _kirim_06(bot, user_id)
-            elif jam == "21:00":
+            elif jam == u.get("jam_ringkasan", "21:00"):
                 await kirim_ringkasan(bot, user_id)
             elif jam == u.get("jam_cofmed", "21:30"):
                 await kirim_arsip(bot, user_id)
             return
 
         # Standard levels: existing schedule
-        if jam == "06:00":
+        if jam == u.get("jam_fokus", "06:00"):
             await _kirim_06(bot, user_id)
         elif jam == u.get("jam_pagi", "07:00"):
             await kirim_sesi(bot, user_id, "pagi")
@@ -133,7 +137,7 @@ async def _dispatch(bot: Bot, user_id: int, u: dict, jam: str):
             await kirim_sesi(bot, user_id, "sore")
         elif jam == u.get("jam_malam", "20:00"):
             await kirim_malam(bot, user_id)
-        elif jam == "21:00":
+        elif jam == u.get("jam_ringkasan", "21:00"):
             await kirim_ringkasan(bot, user_id)
         elif jam == u.get("jam_cofmed", "21:30"):
             await kirim_arsip(bot, user_id)
