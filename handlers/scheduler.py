@@ -124,7 +124,7 @@ async def _dispatch(bot: Bot, user_id: int, u: dict, jam: str):
                 return
             # Also send daily bookends for advanced users
             if jam == u.get("jam_fokus", "06:00"):
-                await _kirim_06(bot, user_id)
+                await kirim_jadwal_sumpah_pagi(bot, user_id, level)
             elif jam == u.get("jam_ringkasan", "21:00"):
                 await kirim_ringkasan(bot, user_id)
             elif jam == u.get("jam_cofmed", "21:30"):
@@ -285,6 +285,41 @@ async def _send_all_done(bot, user_id: int, lang: str, vows_today: list, times: 
 
 
 # ─── INDIVIDUAL SEND FUNCTIONS ───────────────────────────────────────────────
+
+async def kirim_jadwal_sumpah_pagi(bot: Bot, user_id: int, level: str):
+    """06:00 for Advanced/Super Advanced — send today's full vow schedule."""
+    from datetime import date as dt_date
+    from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
+                           ADVANCED_VOWS, SUPER_ADVANCED_VOWS, ADV_TIMES, SA_TIMES)
+    db_user = await get_user(user_id)
+    if not db_user:
+        return
+    lang = db_user.get("bahasa", "id") or "id"
+
+    join_date_raw = db_user.get("join_date")
+    today = datetime.now(WIB).date()
+    jd = join_date_raw if (join_date_raw and isinstance(join_date_raw, dt_date)) else today
+    day_number = (today - jd).days + 1
+
+    times = ADV_TIMES if level == "advanced" else SA_TIMES
+    vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
+    vow_dict = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
+    label = T("sumpah_label_advanced" if level == "advanced" else "sumpah_label_super", lang)
+    sesi_word = "Jadwal Sumpah Hari Ini" if lang == "id" else "Today's Vow Schedule"
+
+    lines = [f"📿 *{label}*\n_{sesi_word} (Day {day_number}):_\n"]
+    for t, v in zip(times, vows):
+        if isinstance(v, list):
+            nums = " & ".join(f"#{n}" for n in v)
+            lines.append(f"*{t}* — {nums}")
+        else:
+            en, id_ = vow_dict.get(v, ("?", "?"))
+            text = id_ if lang == "id" else en
+            short = text[:55] + "..." if len(text) > 55 else text
+            lines.append(f"*{t}* — *#{v}* _{short}_")
+
+    await bot.send_message(chat_id=user_id, text="\n".join(lines), parse_mode="Markdown")
+
 
 async def _kirim_06(bot: Bot, user_id: int):
     """06:00 — tanya ganti fokus atau lanjutkan."""
