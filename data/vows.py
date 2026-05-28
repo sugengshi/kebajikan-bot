@@ -604,29 +604,33 @@ def get_sa_vows_for_day(day_number: int) -> list:
     return row
 
 
-def format_vow_message(vow_num: int, vow_dict: dict, level_label: str) -> str:
+def format_vow_message(vow_num: int, vow_dict: dict, level_label: str, lang: str = "id") -> str:
     """Format a single vow as a bilingual Telegram message."""
+    from utils.i18n import T
     en, id_ = vow_dict.get(vow_num, ("Unknown vow", "Sumpah tidak dikenal"))
+    vow_word = "Vow" if lang == "en" else "Sumpah"
     return (
         f"🪷 *{level_label}*\n"
-        f"*Sumpah #{vow_num}*\n\n"
+        f"*{vow_word} #{vow_num}*\n\n"
         f"🇬🇧 _{en}_\n\n"
         f"🇮🇩 _{id_}_\n\n"
         f"─────────────────────\n"
-        f"_Renungkan sumpah ini dalam setiap tindakan, perkataan, dan pikiran Anda hari ini._ 🙏"
+        f"{T('sumpah_renungan', lang)}"
     )
 
 
-def format_vow_pair_message(vow_nums: list, vow_dict: dict, level_label: str) -> str:
+def format_vow_pair_message(vow_nums: list, vow_dict: dict, level_label: str, lang: str = "id") -> str:
     """Format a pair of vows (used for SA day 44 last slot)."""
+    from utils.i18n import T
+    vow_word = "Vow" if lang == "en" else "Sumpah"
     lines = [f"🪷 *{level_label}*\n"]
     for n in vow_nums:
         en, id_ = vow_dict.get(n, ("Unknown vow", "Sumpah tidak dikenal"))
-        lines.append(f"*Sumpah #{n}*")
+        lines.append(f"*{vow_word} #{n}*")
         lines.append(f"🇬🇧 _{en}_")
         lines.append(f"🇮🇩 _{id_}_\n")
     lines.append("─────────────────────")
-    lines.append("_Renungkan sumpah-sumpah ini dalam setiap tindakan, perkataan, dan pikiran Anda hari ini._ 🙏")
+    lines.append(T("sumpah_renungan", lang))
     return "\n".join(lines)
 
 

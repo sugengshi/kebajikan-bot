@@ -229,19 +229,19 @@ async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict, vo
         jam = next_jam
         if isinstance(vow, list):
             vow_intro = T("sumpah_berikutnya", lang) + "\n\n"
-            text = vow_intro + format_vow_pair_message(vow, vow_dict, label)
+            text = vow_intro + format_vow_pair_message(vow, vow_dict, label, lang)
             vow_num = vow[0]
         else:
             vow_intro = T("sumpah_berikutnya", lang) + "\n\n"
-            text = vow_intro + format_vow_message(vow, vow_dict, label)
+            text = vow_intro + format_vow_message(vow, vow_dict, label, lang)
             vow_num = vow
     else:
         # Normal case — send this slot's vow
         if isinstance(vow, list):
-            text = format_vow_pair_message(vow, vow_dict, label)
+            text = format_vow_pair_message(vow, vow_dict, label, lang)
             vow_num = vow[0]
         else:
-            text = format_vow_message(vow, vow_dict, label)
+            text = format_vow_message(vow, vow_dict, label, lang)
             vow_num = vow
 
     # Add inline reflect button
