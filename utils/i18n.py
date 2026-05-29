@@ -866,7 +866,7 @@ def T(key: str, lang: str, **kwargs) -> str:
     kwargs.setdefault("cmd_laporan",   cmds["laporan"])
     kwargs.setdefault("cmd_level",     cmds["level"])
     kwargs.setdefault("cmd_help",      cmds["help"])
-    if kwargs:
+    if kwargs and isinstance(text, str):
         try:
             text = text.format(**kwargs)
         except KeyError:
