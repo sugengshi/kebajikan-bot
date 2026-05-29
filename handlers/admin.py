@@ -45,7 +45,8 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lang     = u.get("bahasa") or "id"
         tz       = u.get("timezone") or "Asia/Jakarta"
         done     = "✅" if u.get("onboarding_selesai") else "⏳"
-        lines.append(f"{done} `{uid}` — *{name}* {emoji} `{level}` [{lang}] {tz}")
+        safe_name = name.replace("`", "'")
+        lines.append(f"{done} `{uid}` — `{safe_name}` {emoji} `{level}` [{lang}] {tz}")
 
     # Telegram message limit: split if too long
     text = "\n".join(lines)
@@ -99,11 +100,13 @@ async def cmd_admin_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         join_str = "—"
 
-    vow_times = u.get("vow_times") or "default"
+    vow_times  = u.get("vow_times") or "default"
+    safe_name  = (u.get("username") or "—").replace("`", "'")
+    safe_goal  = (u.get("tujuan_smart") or "—")[:120].replace("`", "'")
     lines = [
         f"👤 *User Profile*\n",
         f"ID: `{uid}`",
-        f"Name: *{u.get('username') or '—'}*",
+        f"Name: `{safe_name}`",
         f"Level: {emoji} `{level}`",
         f"Language: `{u.get('bahasa') or 'id'}`",
         f"Timezone: `{u.get('timezone') or 'Asia/Jakarta'}`",
@@ -111,7 +114,7 @@ async def cmd_admin_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Join date: `{join_str}`",
         f"Vow times: `{vow_times}`",
         f"Kebajikan fokus: `{fokus}`",
-        f"SMART goal: _{(u.get('tujuan_smart') or '—')[:120]}_",
+        f"SMART goal: `{safe_goal}`",
         f"\n*Notification times:*",
         f"06:00 jam_fokus → `{u.get('jam_fokus', '06:00')}`",
         f"07:00 jam_pagi  → `{u.get('jam_pagi',  '07:00')}`",
