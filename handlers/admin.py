@@ -3,7 +3,7 @@ import os
 import logging
 from datetime import datetime
 import pytz
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from utils.database import get_all_users, get_user, get_catatan_hari_ini, get_tambahan_malam
 
@@ -27,7 +27,7 @@ def _is_admin(user_id: int) -> bool:
 # ─── /adminusers ─────────────────────────────────────────────────────────────
 
 async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """List all registered users with key profile info."""
+    """List all registered users with a 📋 button to view each user's entries."""
     if not _is_admin(update.effective_user.id):
         return
 
@@ -37,19 +37,27 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     lines = [f"👥 *All Users* ({len(users)} total)\n"]
+    buttons = []
     for u in users:
-        uid      = u["user_id"]
-        name     = u.get("username") or "—"
-        level    = u.get("level") or "pemula"
-        emoji    = LEVEL_EMOJI.get(level, "•")
-        lang     = u.get("bahasa") or "id"
-        tz       = u.get("timezone") or "Asia/Jakarta"
-        done     = "✅" if u.get("onboarding_selesai") else "⏳"
+        uid       = u["user_id"]
+        name      = u.get("username") or "—"
+        level     = u.get("level") or "pemula"
+        emoji     = LEVEL_EMOJI.get(level, "•")
+        lang      = u.get("bahasa") or "id"
+        tz        = u.get("timezone") or "Asia/Jakarta"
+        done      = "✅" if u.get("onboarding_selesai") else "⏳"
         safe_name = name.replace("`", "'")
         lines.append(f"{done} `{uid}` — `{safe_name}` {emoji} `{level}` [{lang}] {tz}")
+        # One button per user — tap to see today's entries
+        btn_label = f"📋 {safe_name} {emoji}"
+        buttons.append(InlineKeyboardButton(btn_label, callback_data=f"admin_entries_{uid}"))
 
-    # Telegram message limit: split if too long
+    # Pair buttons into rows of 2
+    kb_rows = [buttons[i:i+2] for i in range(0, len(buttons), 2)]
+    kb = InlineKeyboardMarkup(kb_rows)
+
     text = "\n".join(lines)
+    # Split if too long, attach buttons only to the last chunk
     if len(text) > 4000:
         chunks = []
         chunk = lines[0] + "\n"
@@ -59,10 +67,27 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chunk = ""
             chunk += line + "\n"
         chunks.append(chunk)
-        for c in chunks:
-            await update.message.reply_text(c, parse_mode="Markdown")
+        for i, c in enumerate(chunks):
+            if i < len(chunks) - 1:
+                await update.message.reply_text(c, parse_mode="Markdown")
+            else:
+                await update.message.reply_text(c, parse_mode="Markdown", reply_markup=kb)
     else:
-        await update.message.reply_text(text, parse_mode="Markdown")
+        await update.message.reply_text(text, parse_mode="Markdown", reply_markup=kb)
+
+
+# ─── Entries callback (tap 📋 button) ────────────────────────────────────────
+
+async def admin_entries_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Callback for 📋 buttons in /adminusers — show today's entries for that user."""
+    query = update.callback_query
+    await query.answer()
+
+    if not _is_admin(query.from_user.id):
+        return
+
+    uid = int(query.data.replace("admin_entries_", ""))
+    await _send_entries(query.message.reply_text, uid)
 
 
 # ─── /adminuser <user_id> ─────────────────────────────────────────────────────
@@ -88,10 +113,10 @@ async def cmd_admin_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"No user found with ID `{uid}`.", parse_mode="Markdown")
         return
 
-    level   = u.get("level") or "pemula"
-    emoji   = LEVEL_EMOJI.get(level, "•")
-    fokus   = u.get("kebajikan_fokus") or []
-    join_dt = u.get("join_date")
+    level      = u.get("level") or "pemula"
+    emoji      = LEVEL_EMOJI.get(level, "•")
+    fokus      = u.get("kebajikan_fokus") or []
+    join_dt    = u.get("join_date")
     if join_dt:
         today = datetime.now(WIB).date()
         jd = join_dt.date() if hasattr(join_dt, "date") else join_dt
@@ -124,7 +149,11 @@ async def cmd_admin_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"21:00 jam_ring  → `{u.get('jam_ringkasan', '21:00')}`",
         f"21:30 jam_cof   → `{u.get('jam_cofmed', '21:30')}`",
     ]
-    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    # Button to view today's entries
+    kb = InlineKeyboardMarkup([[
+        InlineKeyboardButton("📋 View Today's Entries", callback_data=f"admin_entries_{uid}")
+    ]])
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown", reply_markup=kb)
 
 
 # ─── /adminentries <user_id> ─────────────────────────────────────────────────
@@ -145,29 +174,36 @@ async def cmd_admin_entries(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Invalid user ID.")
         return
 
+    await _send_entries(update.message.reply_text, uid)
+
+
+# ─── Shared entries formatter ─────────────────────────────────────────────────
+
+async def _send_entries(reply_fn, uid: int):
+    """Fetch and send today's entries for uid using the given reply function."""
     catatan  = await get_catatan_hari_ini(uid)
     tambahan = await get_tambahan_malam(uid)
     today    = datetime.now(WIB).strftime("%d %B %Y")
 
     if not catatan and not tambahan:
-        await update.message.reply_text(
+        await reply_fn(
             f"📭 No entries today for user `{uid}`.", parse_mode="Markdown"
         )
         return
 
-    lines = [f"📋 *Entries for `{uid}`*\n_{today}_\n"]
+    lines = [f"📋 *Entries for* `{uid}`\n_{today}_\n"]
     for c in catatan:
-        sesi    = c.get("sesi", "")
-        k_id    = c.get("kebajikan_id", 0)
-        pos     = c.get("catatan_positif", "").strip()
-        neg     = c.get("catatan_negatif", "").strip()
-        plan    = c.get("rencana_kedepan", "").strip()
-        header  = f"slot_{sesi}" if not sesi.startswith("slot_") else sesi
-        lines.append(f"*{header}* | #{k_id}")
-        if pos:   lines.append(f"  ✅ {pos}")
+        sesi   = c.get("sesi", "")
+        k_id   = c.get("kebajikan_id", 0)
+        pos    = c.get("catatan_positif", "").strip()
+        neg    = c.get("catatan_negatif", "").strip()
+        plan   = c.get("rencana_kedepan", "").strip()
+        header = sesi if sesi.startswith("slot_") else f"*{sesi}*"
+        lines.append(f"{header} | #`{k_id}`")
+        if pos:  lines.append(f"  ✅ {pos}")
         if neg and neg.lower() not in ("-", "tidak ada", "none", ""):
             lines.append(f"  ❌ {neg}")
-        if plan:  lines.append(f"  🌱 {plan}")
+        if plan: lines.append(f"  🌱 {plan}")
         lines.append("")
 
     if tambahan:
@@ -175,4 +211,4 @@ async def cmd_admin_entries(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for t in tambahan:
             lines.append(f"  ✅ {t}")
 
-    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    await reply_fn("\n".join(lines), parse_mode="Markdown")

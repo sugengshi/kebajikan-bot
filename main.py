@@ -13,7 +13,7 @@ from handlers.conversation import (
     callback_pagi_ganti, cmd_setjam, laporan_mode_cb, rewrite_vow_cb
 )
 from handlers.scheduler import init_scheduler
-from handlers.admin import cmd_admin_users, cmd_admin_user, cmd_admin_entries
+from handlers.admin import cmd_admin_users, cmd_admin_user, cmd_admin_entries, admin_entries_cb
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -129,6 +129,7 @@ def main():
     app.add_handler(CommandHandler("adminusers",   cmd_admin_users))
     app.add_handler(CommandHandler("adminuser",    cmd_admin_user))
     app.add_handler(CommandHandler("adminentries", cmd_admin_entries))
+    app.add_handler(CallbackQueryHandler(admin_entries_cb, pattern="^admin_entries_"))
 
     app.add_error_handler(error_handler)
 
