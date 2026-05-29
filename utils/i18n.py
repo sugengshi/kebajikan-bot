@@ -403,7 +403,8 @@ STRINGS = {
             "*{jam} — Sumpah #{vow}*\n\n"
             "🇬🇧 _{en}_\n\n"
             "🇮🇩 _{id_}_\n\n"
-            "─────────────────────\n\n"
+            "─────────────────────\n"
+            "_Anda akan menjawab 3 pertanyaan terkait sumpah ini._\n\n"
             "✅ *Pertanyaan 1 dari 3*\n\n"
             "Selama 24 jam terakhir, adakah perbuatan, perkataan, atau pikiran yang "
             "SESUAI dengan sumpah ini?\n\n"
@@ -414,7 +415,8 @@ STRINGS = {
             "*{jam} — Vow #{vow}*\n\n"
             "🇬🇧 _{en}_\n\n"
             "🇮🇩 _{id_}_\n\n"
-            "─────────────────────\n\n"
+            "─────────────────────\n"
+            "_You will answer 3 questions related to this vow._\n\n"
             "✅ *Question 1 of 3*\n\n"
             "In the last 24 hours, were there any actions, words, or thoughts "
             "IN LINE with this vow?\n\n"
@@ -423,12 +425,20 @@ STRINGS = {
     },
     "sumpah_refleksi_negatif": {
         "id": (
+            "📿 *Sumpah #{vow}*\n\n"
+            "🇬🇧 _{en}_\n\n"
+            "🇮🇩 _{id_}_\n\n"
+            "─────────────────────\n\n"
             "⚠️ *Pertanyaan 2 dari 3*\n\n"
             "Adakah perbuatan, perkataan, atau pikiran yang TIDAK SESUAI dengan sumpah ini "
             "dalam 24 jam terakhir?\n\n"
             "_Jawab dengan jujur — ini bukan untuk dihakimi, tapi untuk disadari._"
         ),
         "en": (
+            "📿 *Vow #{vow}*\n\n"
+            "🇬🇧 _{en}_\n\n"
+            "🇮🇩 _{id_}_\n\n"
+            "─────────────────────\n\n"
             "⚠️ *Question 2 of 3*\n\n"
             "Were there any actions, words, or thoughts OUT OF LINE with this vow "
             "in the last 24 hours?\n\n"
@@ -437,14 +447,20 @@ STRINGS = {
     },
     "sumpah_refleksi_rencana": {
         "id": (
+            "⚠️ *Catatan negatif Anda:*\n"
+            "{negatif}\n\n"
+            "─────────────────────\n\n"
             "🌱 *Pertanyaan 3 dari 3*\n\n"
-            "Untuk menyeimbangkan bibit negatif di atas, apa rencana konkret yang "
+            "Untuk menyeimbangkan catatan di atas, apa rencana konkret yang "
             "akan Anda lakukan dalam 24 jam ke depan?\n\n"
             "_Satu tindakan kecil pun sudah cukup._"
         ),
         "en": (
+            "⚠️ *Your negative note:*\n"
+            "{negatif}\n\n"
+            "─────────────────────\n\n"
             "🌱 *Question 3 of 3*\n\n"
-            "To balance the negative seeds above, what concrete plan will "
+            "To balance the note above, what concrete plan will "
             "you carry out in the next 24 hours?\n\n"
             "_Even one small action is enough._"
         ),

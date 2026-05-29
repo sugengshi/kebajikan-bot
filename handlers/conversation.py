@@ -629,17 +629,34 @@ async def pilih_sumpah_slot_cb(update: Update, context: ContextTypes.DEFAULT_TYP
     return SUMPAH_REFLEKSI_POSITIF
 
 
+def _esc_md(text: str) -> str:
+    """Escape Markdown v1 special characters in user-generated text."""
+    for ch in ("_", "*", "`", "["):
+        text = text.replace(ch, f"\\{ch}")
+    return text
+
+
 async def terima_sumpah_positif(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await _lang(update.effective_user.id, context)
     context.user_data["sumpah_positif"] = update.message.text
-    await update.message.reply_text(T("sumpah_refleksi_negatif", lang), parse_mode="Markdown")
+    vow = context.user_data.get("sumpah_vow_num", 0)
+    en  = context.user_data.get("sumpah_vow_en", "")
+    id_ = context.user_data.get("sumpah_vow_id", "")
+    await update.message.reply_text(
+        T("sumpah_refleksi_negatif", lang, vow=vow, en=en, id_=id_),
+        parse_mode="Markdown"
+    )
     return SUMPAH_REFLEKSI_NEGATIF
 
 
 async def terima_sumpah_negatif(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await _lang(update.effective_user.id, context)
-    context.user_data["sumpah_negatif"] = update.message.text
-    await update.message.reply_text(T("sumpah_refleksi_rencana", lang), parse_mode="Markdown")
+    negatif = update.message.text
+    context.user_data["sumpah_negatif"] = negatif
+    await update.message.reply_text(
+        T("sumpah_refleksi_rencana", lang, negatif=_esc_md(negatif)),
+        parse_mode="Markdown"
+    )
     return SUMPAH_REFLEKSI_RENCANA
 
 
