@@ -193,20 +193,17 @@ async def _send_entries(reply_fn, uid: int):
     today    = datetime.now(WIB).strftime("%d %B %Y")
 
     if not catatan and not tambahan:
-        await reply_fn(
-            f"📭 No entries today for user `{uid}`.", parse_mode="Markdown"
-        )
+        await reply_fn(f"📭 No entries today for user {uid}.")
         return
 
-    lines = [f"📋 *Entries for* `{uid}`\n_{today}_\n"]
+    lines = [f"📋 Entries for {uid}\n{today}\n"]
     for c in catatan:
         sesi   = c.get("sesi", "")
         k_id   = c.get("kebajikan_id", 0)
-        pos    = _esc(c.get("catatan_positif", "").strip())
-        neg    = _esc(c.get("catatan_negatif", "").strip())
-        plan   = _esc(c.get("rencana_kedepan", "").strip())
-        header = sesi if sesi.startswith("slot_") else f"*{sesi}*"
-        lines.append(f"{header} | #`{k_id}`")
+        pos    = c.get("catatan_positif", "").strip()
+        neg    = c.get("catatan_negatif", "").strip()
+        plan   = c.get("rencana_kedepan", "").strip()
+        lines.append(f"[ {sesi} | #{k_id} ]")
         if pos:  lines.append(f"  ✅ {pos}")
         if neg and neg.lower() not in ("-", "tidak ada", "none", ""):
             lines.append(f"  ❌ {neg}")
@@ -214,8 +211,8 @@ async def _send_entries(reply_fn, uid: int):
         lines.append("")
 
     if tambahan:
-        lines.append("*🌙 Tambahan:*")
+        lines.append("🌙 Tambahan:")
         for t in tambahan:
-            lines.append(f"  ✅ {_esc(str(t))}")
+            lines.append(f"  ✅ {str(t)}")
 
-    await reply_fn("\n".join(lines), parse_mode="Markdown")
+    await reply_fn("\n".join(lines))
