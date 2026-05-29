@@ -24,6 +24,13 @@ def _is_admin(user_id: int) -> bool:
     return str(user_id) == admin_id
 
 
+def _esc(text: str) -> str:
+    """Escape Markdown v1 special characters in user-generated text."""
+    for ch in ("_", "*", "`", "["):
+        text = text.replace(ch, f"\\{ch}")
+    return text
+
+
 # ─── /adminusers ─────────────────────────────────────────────────────────────
 
 async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -195,9 +202,9 @@ async def _send_entries(reply_fn, uid: int):
     for c in catatan:
         sesi   = c.get("sesi", "")
         k_id   = c.get("kebajikan_id", 0)
-        pos    = c.get("catatan_positif", "").strip()
-        neg    = c.get("catatan_negatif", "").strip()
-        plan   = c.get("rencana_kedepan", "").strip()
+        pos    = _esc(c.get("catatan_positif", "").strip())
+        neg    = _esc(c.get("catatan_negatif", "").strip())
+        plan   = _esc(c.get("rencana_kedepan", "").strip())
         header = sesi if sesi.startswith("slot_") else f"*{sesi}*"
         lines.append(f"{header} | #`{k_id}`")
         if pos:  lines.append(f"  ✅ {pos}")
@@ -209,6 +216,6 @@ async def _send_entries(reply_fn, uid: int):
     if tambahan:
         lines.append("*🌙 Tambahan:*")
         for t in tambahan:
-            lines.append(f"  ✅ {t}")
+            lines.append(f"  ✅ {_esc(str(t))}")
 
     await reply_fn("\n".join(lines), parse_mode="Markdown")
