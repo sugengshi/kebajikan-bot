@@ -1174,8 +1174,18 @@ async def terima_vow_awal(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def konfirmasi_vow_awal_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    lang = await _lang(query.from_user.id, context)
+    user_id = query.from_user.id
+    lang = await _lang(user_id, context)
     if query.data == "atur_jam_vow":
+        # Seed vow_times_new from saved values so skipped slots keep current time
+        db_user = await get_user(user_id)
+        saved = (db_user.get("vow_times") or "") if db_user else ""
+        saved_list = saved.split() if saved else []
+        current_vow_times = [
+            saved_list[i] if i < len(saved_list) else VOW_JAM_DEFAULTS[i]
+            for i in range(6)
+        ]
+        context.user_data["vow_times_new"] = current_vow_times
         return await _vow_jam_next_slot(query.message, context, lang, slot=0)
     return ConversationHandler.END
 
@@ -1188,7 +1198,8 @@ async def _vow_jam_next_slot(message, context, lang: str, slot: int):
     if isinstance(slot_names, str):
         import json
         slot_names = json.loads(slot_names)
-    current = VOW_JAM_DEFAULTS[slot]
+    vow_times = context.user_data.get("vow_times_new", list(VOW_JAM_DEFAULTS))
+    current = vow_times[slot]
     await message.reply_text(
         T("vow_jam_prompt", lang, n=slot + 1, nama_slot=slot_names[slot], jam_sekarang=current),
         parse_mode="Markdown",
@@ -1247,7 +1258,12 @@ async def cmd_setjam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = db_user.get("bahasa", "id") if db_user else "id"
     context.user_data["lang"] = lang
     context.user_data["setjam_slot"] = 0
-    context.user_data["setjam_new"] = list(SETJAM_DEFAULTS)
+    # Seed from user's saved values so skipped slots keep their current time
+    current_times = [
+        (db_user.get(key) if db_user else None) or default
+        for key, default in zip(SETJAM_DB_KEYS, SETJAM_DEFAULTS)
+    ]
+    context.user_data["setjam_new"] = current_times
     return await _setjam_next_slot(update.message, context, lang, 0, db_user)
 
 
