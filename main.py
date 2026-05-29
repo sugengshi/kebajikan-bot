@@ -120,10 +120,6 @@ def main():
     app.add_handler(CommandHandler("help",      cmd_help))
     app.add_handler(CommandHandler("bantuan",   cmd_help))
 
-    # Setjam also works mid-conversation (group 1)
-    app.add_handler(CommandHandler("setjam",  cmd_setjam), group=1)
-    app.add_handler(CommandHandler("settime", cmd_setjam), group=1)
-
     # Callbacks
     app.add_handler(CallbackQueryHandler(callback_pagi_ganti, pattern="^pagi_ganti_"))
     app.add_handler(CallbackQueryHandler(laporan_mode_cb, pattern="^laporan_"))
