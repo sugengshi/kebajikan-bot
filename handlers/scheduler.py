@@ -28,6 +28,33 @@ from data.vows import (
 logger = logging.getLogger(__name__)
 WIB = pytz.timezone("Asia/Jakarta")
 
+
+def _user_today(db_user: dict):
+    """Return today's date in the user's own timezone (avoids UTC-midnight off-by-one)."""
+    from datetime import date as dt_date
+    tz_str = (db_user or {}).get("timezone") or "Asia/Jakarta"
+    try:
+        tz = pytz.timezone(tz_str)
+    except Exception:
+        tz = WIB
+    return datetime.now(tz).date()
+
+
+def _day_number(db_user: dict) -> int:
+    """Compute today's day-number in the user's own timezone."""
+    from datetime import date as dt_date
+    join_date_raw = (db_user or {}).get("join_date")
+    today = _user_today(db_user)
+    if not join_date_raw:
+        return 1
+    jd = join_date_raw
+    if hasattr(jd, "date"):
+        jd = jd.date()
+    elif not isinstance(jd, dt_date):
+        return 1
+    return (today - jd).days + 1
+
+
 # Maximum random delay per user in seconds (5-minute window)
 JITTER_MAX = 5 * 60  # 300 seconds
 
@@ -159,18 +186,8 @@ async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict, vo
     if not db_user:
         return
 
-    # Calculate day number since join
-    join_date_raw = db_user.get("join_date")
-    if not join_date_raw:
-        day_number = 1
-    else:
-        today = datetime.now(WIB).date()
-        if hasattr(join_date_raw, 'date'):
-            jd = join_date_raw.date()
-        else:
-            from datetime import date as dt_date
-            jd = join_date_raw if isinstance(join_date_raw, dt_date) else today
-        day_number = (today - jd).days + 1
+    # Calculate day number since join (in user's own timezone)
+    day_number = _day_number(db_user)
 
     # Get slot index from time
     if vow_times is None:
@@ -288,18 +305,13 @@ async def _send_all_done(bot, user_id: int, lang: str, vows_today: list, times: 
 
 async def kirim_jadwal_sumpah_pagi(bot: Bot, user_id: int, level: str):
     """06:00 for Advanced/Super Advanced — send today's full vow schedule."""
-    from datetime import date as dt_date
     from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
                            ADVANCED_VOWS, SUPER_ADVANCED_VOWS, ADV_TIMES, SA_TIMES)
     db_user = await get_user(user_id)
     if not db_user:
         return
     lang = db_user.get("bahasa", "id") or "id"
-
-    join_date_raw = db_user.get("join_date")
-    today = datetime.now(WIB).date()
-    jd = join_date_raw if (join_date_raw and isinstance(join_date_raw, dt_date)) else today
-    day_number = (today - jd).days + 1
+    day_number = _day_number(db_user)
 
     times = ADV_TIMES if level == "advanced" else SA_TIMES
     vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
@@ -387,7 +399,6 @@ async def kirim_malam(bot: Bot, user_id: int):
 async def kirim_ringkasan(bot: Bot, user_id: int):
     """21:00 — tampilkan semua perbuatan baik hari ini (positif saja)."""
     from utils.messages import build_vow_time_map
-    from datetime import date as dt_date
     db_user = await get_user(user_id)
     lang = (db_user.get("bahasa", "id") or "id") if db_user else "id"
     catatan = await get_catatan_hari_ini(user_id)
@@ -397,11 +408,7 @@ async def kirim_ringkasan(bot: Bot, user_id: int):
     if db_user:
         level = db_user.get("level", "pemula")
         if level in ("advanced", "super_advanced"):
-            join_date_raw = db_user.get("join_date")
-            today = datetime.now(WIB).date()
-            jd = join_date_raw if (join_date_raw and isinstance(join_date_raw, dt_date)) else today
-            day_number = (today - jd).days + 1
-            vow_time_map = build_vow_time_map(level, day_number)
+            vow_time_map = build_vow_time_map(level, _day_number(db_user))
 
     await bot.send_message(
         chat_id=user_id,
@@ -413,7 +420,6 @@ async def kirim_ringkasan(bot: Bot, user_id: int):
 async def kirim_arsip(bot: Bot, user_id: int):
     """21:30 — arsip pribadi lengkap (semua entri refleksi + tambahan)."""
     from utils.messages import build_vow_time_map
-    from datetime import date as dt_date
     catatan = await get_catatan_hari_ini(user_id)
     tambahan = await get_tambahan_malam(user_id)
     db_user = await get_user(user_id)
@@ -424,11 +430,7 @@ async def kirim_arsip(bot: Bot, user_id: int):
     if db_user:
         level = db_user.get("level", "pemula")
         if level in ("advanced", "super_advanced"):
-            join_date_raw = db_user.get("join_date")
-            today = datetime.now(WIB).date()
-            jd = join_date_raw if (join_date_raw and isinstance(join_date_raw, dt_date)) else today
-            day_number = (today - jd).days + 1
-            vow_time_map = build_vow_time_map(level, day_number)
+            vow_time_map = build_vow_time_map(level, _day_number(db_user))
 
     if not catatan and not tambahan:
         await bot.send_message(

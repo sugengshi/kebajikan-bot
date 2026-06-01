@@ -69,6 +69,32 @@ def _sesi_sekarang() -> str:
     else:          return "sore"
 
 
+def _today_for_user(db_user: dict):
+    """Return today's date in the user's local timezone (avoids UTC midnight bugs)."""
+    import pytz
+    from datetime import datetime
+    tz_str = (db_user or {}).get("timezone") or "Asia/Jakarta"
+    try:
+        tz = pytz.timezone(tz_str)
+    except Exception:
+        tz = pytz.timezone("Asia/Jakarta")
+    return datetime.now(tz).date()
+
+
+def _day_number_for_user(db_user: dict) -> int:
+    """Compute today's day-number in the user's own timezone."""
+    from datetime import date as dt_date
+    join_date_raw = (db_user or {}).get("join_date")
+    today = _today_for_user(db_user)
+    if join_date_raw:
+        jd = join_date_raw if isinstance(join_date_raw, dt_date) else today
+        # datetime subclasses date — convert if needed
+        if hasattr(jd, "date"):
+            jd = jd.date()
+        return (today - jd).days + 1
+    return 1
+
+
 async def _lang(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str:
     if "lang" in context.user_data:
         return context.user_data["lang"]
@@ -445,11 +471,7 @@ async def reflect_vow_from_scheduler_cb(update: Update, context: ContextTypes.DE
     level = db_user.get("level", "advanced")
     from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
                            ADVANCED_VOWS, SUPER_ADVANCED_VOWS, ADV_TIMES, SA_TIMES)
-    from datetime import date as dt_date
-    join_date_raw = db_user.get("join_date")
-    today = dt_date.today()
-    jd = join_date_raw if (join_date_raw and isinstance(join_date_raw, dt_date)) else today
-    day_number = (today - jd).days + 1
+    day_number = _day_number_for_user(db_user)
     vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
     times = ADV_TIMES if level == "advanced" else SA_TIMES
     vow_dict = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
@@ -508,18 +530,9 @@ async def _tampilkan_pilihan_sumpah(message, context, lang: str, db_user: dict):
     """For Advanced/Super Advanced: show today's vow schedule as selectable buttons."""
     from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
                            ADVANCED_VOWS, SUPER_ADVANCED_VOWS, ADV_TIMES, SA_TIMES)
-    from datetime import date as dt_date
 
     level = db_user.get("level", "advanced")
-    join_date_raw = db_user.get("join_date")
-
-    # Calculate day number
-    today = dt_date.today()
-    if join_date_raw:
-        jd = join_date_raw if isinstance(join_date_raw, dt_date) else today
-        day_number = (today - jd).days + 1
-    else:
-        day_number = 1
+    day_number = _day_number_for_user(db_user)
 
     times = ADV_TIMES if level == "advanced" else SA_TIMES
     vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
@@ -588,11 +601,7 @@ async def pilih_sumpah_slot_cb(update: Update, context: ContextTypes.DEFAULT_TYP
         level = db_user.get("level", "advanced")
         from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
                                ADV_TIMES, SA_TIMES)
-        from datetime import date as dt_date
-        join_date_raw = db_user.get("join_date")
-        today = dt_date.today()
-        jd = join_date_raw if (join_date_raw and isinstance(join_date_raw, dt_date)) else today
-        day_number = (today - jd).days + 1
+        day_number = _day_number_for_user(db_user)
         vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
         times = ADV_TIMES if level == "advanced" else SA_TIMES
         context.user_data["sumpah_vows_today"] = vows
@@ -926,14 +935,7 @@ async def cmd_kebajikan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if level in ("advanced", "super_advanced"):
         from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
                                ADVANCED_VOWS, SUPER_ADVANCED_VOWS, ADV_TIMES, SA_TIMES)
-        from datetime import date as dt_date
-        join_date_raw = db_user.get("join_date")
-        today = dt_date.today()
-        if join_date_raw:
-            jd = join_date_raw if isinstance(join_date_raw, dt_date) else today
-            day_number = (today - jd).days + 1
-        else:
-            day_number = 1
+        day_number = _day_number_for_user(db_user)
         times = ADV_TIMES if level == "advanced" else SA_TIMES
         vows = get_adv_vows_for_day(day_number) if level == "advanced" else get_sa_vows_for_day(day_number)
         vow_dict = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
