@@ -54,7 +54,7 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tz        = u.get("timezone") or "Asia/Jakarta"
         done      = "✅" if u.get("onboarding_selesai") else "⏳"
         safe_name = name.replace("`", "'")
-        lines.append(f"{done} `{uid}` — `{safe_name}` {emoji} `{level}` [{lang}] {tz}")
+        lines.append(f"{done} `{uid}` — `{safe_name}` {emoji} `{level}` [{lang}] `{tz}`")
         # One button per user — tap to see today's entries
         btn_label = f"📋 {safe_name} {emoji}"
         buttons.append(InlineKeyboardButton(btn_label, callback_data=f"admin_entries_{uid}"))
@@ -133,34 +133,34 @@ async def cmd_admin_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         join_str = "—"
 
     vow_times  = u.get("vow_times") or "default"
-    safe_name  = (u.get("username") or "—").replace("`", "'")
-    safe_goal  = (u.get("tujuan_smart") or "—")[:120].replace("`", "'")
+    safe_name  = (u.get("username") or "—")
+    safe_goal  = (u.get("tujuan_smart") or "—")[:120]
     lines = [
-        f"👤 *User Profile*\n",
-        f"ID: `{uid}`",
-        f"Name: `{safe_name}`",
-        f"Level: {emoji} `{level}`",
-        f"Language: `{u.get('bahasa') or 'id'}`",
-        f"Timezone: `{u.get('timezone') or 'Asia/Jakarta'}`",
+        f"👤 User Profile\n",
+        f"ID:       {uid}",
+        f"Name:     {safe_name}",
+        f"Level:    {emoji} {level}",
+        f"Language: {u.get('bahasa') or 'id'}",
+        f"Timezone: {u.get('timezone') or 'Asia/Jakarta'}",
         f"Onboarding: {'✅ done' if u.get('onboarding_selesai') else '⏳ pending'}",
-        f"Join date: `{join_str}`",
-        f"Vow times: `{vow_times}`",
-        f"Kebajikan fokus: `{fokus}`",
-        f"SMART goal: `{safe_goal}`",
-        f"\n*Notification times:*",
-        f"06:00 jam_fokus → `{u.get('jam_fokus', '06:00')}`",
-        f"07:00 jam_pagi  → `{u.get('jam_pagi',  '07:00')}`",
-        f"12:00 jam_siang → `{u.get('jam_siang', '12:00')}`",
-        f"18:00 jam_sore  → `{u.get('jam_sore',  '18:00')}`",
-        f"20:00 jam_malam → `{u.get('jam_malam', '20:00')}`",
-        f"21:00 jam_ring  → `{u.get('jam_ringkasan', '21:00')}`",
-        f"21:30 jam_cof   → `{u.get('jam_cofmed', '21:30')}`",
+        f"Join date: {join_str}",
+        f"Vow times: {vow_times}",
+        f"Kebajikan fokus: {fokus}",
+        f"SMART goal: {safe_goal}",
+        f"\nNotification times:",
+        f"  jam_fokus  → {u.get('jam_fokus',    '06:00')}",
+        f"  jam_pagi   → {u.get('jam_pagi',     '07:00')}",
+        f"  jam_siang  → {u.get('jam_siang',    '12:00')}",
+        f"  jam_sore   → {u.get('jam_sore',     '18:00')}",
+        f"  jam_malam  → {u.get('jam_malam',    '20:00')}",
+        f"  jam_ring   → {u.get('jam_ringkasan','21:00')}",
+        f"  jam_cof    → {u.get('jam_cofmed',   '21:30')}",
     ]
     # Button to view today's entries
     kb = InlineKeyboardMarkup([[
         InlineKeyboardButton("📋 View Today's Entries", callback_data=f"admin_entries_{uid}")
     ]])
-    await update.message.reply_text("\n".join(lines), parse_mode="Markdown", reply_markup=kb)
+    await update.message.reply_text("\n".join(lines), reply_markup=kb)
 
 
 # ─── /adminentries <user_id> ─────────────────────────────────────────────────
