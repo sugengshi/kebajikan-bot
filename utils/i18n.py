@@ -823,6 +823,10 @@ STRINGS = {
         "id": "✅ *Jam sumpah tersimpan!*\n\n{ringkasan}\n\n_Perubahan berlaku mulai besok._ 🙏",
         "en": "✅ *Vow times saved!*\n\n{ringkasan}\n\n_Changes take effect from tomorrow._ 🙏",
     },
+    "setvowtime_only_advanced": {
+        "id": "⚠️ Perintah ini hanya untuk level Advanced dan Super Advanced.",
+        "en": "⚠️ This command is only available for Advanced and Super Advanced levels.",
+    },
 }
 
 # ─── COMMAND NAMES PER LANGUAGE ──────────────────────────────────────────────

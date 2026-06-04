@@ -1269,6 +1269,34 @@ async def _vow_jam_advance(message, context, lang: str, slot: int):
     return ConversationHandler.END
 
 
+# ─── /setvowtime / /setjamsumpah ─────────────────────────────────────────────
+
+async def cmd_setvowtime(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Let Advanced/Super Advanced users reset their 6 vow slot times."""
+    user_id = update.effective_user.id
+    db_user = await get_user(user_id)
+    if not db_user:
+        await update.message.reply_text(T("silakan_start", "id"))
+        return ConversationHandler.END
+    lang = db_user.get("bahasa", "id")
+    context.user_data["lang"] = lang
+    level = db_user.get("level", "pemula")
+    if level not in ("advanced", "super_advanced"):
+        await update.message.reply_text(
+            T("setvowtime_only_advanced", lang), parse_mode="Markdown"
+        )
+        return ConversationHandler.END
+    # Seed from current saved vow_times
+    saved = (db_user.get("vow_times") or "")
+    saved_list = saved.split() if saved else []
+    current = [
+        saved_list[i] if i < len(saved_list) else VOW_JAM_DEFAULTS[i]
+        for i in range(6)
+    ]
+    context.user_data["vow_times_new"] = current
+    return await _vow_jam_next_slot(update.message, context, lang, slot=0)
+
+
 # ─── SETJAM SEQUENTIAL ───────────────────────────────────────────────────────
 
 async def cmd_setjam(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1416,8 +1444,10 @@ def build_conversation_handler():
             CommandHandler("add",      cmd_tambahan),
             CommandHandler("level",    cmd_level),
             CommandHandler("language", cmd_language),
-            CommandHandler("setjam",   cmd_setjam),
-            CommandHandler("settime",  cmd_setjam),
+            CommandHandler("setjam",        cmd_setjam),
+            CommandHandler("settime",       cmd_setjam),
+            CommandHandler("setvowtime",    cmd_setvowtime),
+            CommandHandler("setjamsumpah",  cmd_setvowtime),
         ],
         states={
             PILIH_BAHASA: [
