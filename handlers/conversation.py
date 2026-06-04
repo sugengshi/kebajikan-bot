@@ -499,11 +499,16 @@ async def reflect_vow_from_scheduler_cb(update: Update, context: ContextTypes.DE
     context.user_data["sumpah_times_today"] = times
     context.user_data["sumpah_level"] = level
 
+    kb = InlineKeyboardMarkup([[
+        InlineKeyboardButton(T("sumpah_order_pos_label", lang), callback_data="sumpah_order_pos_first"),
+        InlineKeyboardButton(T("sumpah_order_neg_label", lang), callback_data="sumpah_order_neg_first"),
+    ]])
     await query.message.reply_text(
-        T("sumpah_refleksi_positif", lang, label=label, jam=jam, vow=vow, en=en, id_=id_),
-        parse_mode="Markdown"
+        T("sumpah_pilih_urutan", lang, label=label, jam=jam, vow=vow, en=en, id_=id_),
+        parse_mode="Markdown",
+        reply_markup=kb
     )
-    return SUMPAH_REFLEKSI_POSITIF
+    return PILIH_REFLEKSI
 
 
 async def rewrite_vow_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -631,11 +636,45 @@ async def pilih_sumpah_slot_cb(update: Update, context: ContextTypes.DEFAULT_TYP
     context.user_data["sumpah_vow_label"] = label
 
     await query.edit_message_reply_markup(reply_markup=None)
+    kb = InlineKeyboardMarkup([[
+        InlineKeyboardButton(T("sumpah_order_pos_label", lang), callback_data="sumpah_order_pos_first"),
+        InlineKeyboardButton(T("sumpah_order_neg_label", lang), callback_data="sumpah_order_neg_first"),
+    ]])
     await query.message.reply_text(
-        T("sumpah_refleksi_positif", lang, label=label, jam=jam, vow=vow, en=en, id_=id_),
-        parse_mode="Markdown"
+        T("sumpah_pilih_urutan", lang, label=label, jam=jam, vow=vow, en=en, id_=id_),
+        parse_mode="Markdown",
+        reply_markup=kb
     )
-    return SUMPAH_REFLEKSI_POSITIF
+    return PILIH_REFLEKSI
+
+
+async def sumpah_urutan_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User chose reflection order (positive-first or negative-first)."""
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+    order = query.data.replace("sumpah_order_", "")  # "pos_first" or "neg_first"
+    context.user_data["sumpah_order"] = order
+
+    vow   = context.user_data.get("sumpah_vow_num", 0)
+    en    = context.user_data.get("sumpah_vow_en", "")
+    id_   = context.user_data.get("sumpah_vow_id", "")
+    label = context.user_data.get("sumpah_vow_label", "")
+    jam   = context.user_data.get("sumpah_vow_jam", "")
+
+    await query.edit_message_reply_markup(reply_markup=None)
+    if order == "neg_first":
+        await query.message.reply_text(
+            T("sumpah_refleksi_negatif_q1", lang, vow=vow, en=en, id_=id_),
+            parse_mode="Markdown"
+        )
+        return SUMPAH_REFLEKSI_NEGATIF
+    else:
+        await query.message.reply_text(
+            T("sumpah_refleksi_positif", lang, label=label, jam=jam, vow=vow, en=en, id_=id_),
+            parse_mode="Markdown"
+        )
+        return SUMPAH_REFLEKSI_POSITIF
 
 
 def _esc_md(text: str) -> str:
@@ -648,25 +687,51 @@ def _esc_md(text: str) -> str:
 async def terima_sumpah_positif(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await _lang(update.effective_user.id, context)
     context.user_data["sumpah_positif"] = update.message.text
+    order = context.user_data.get("sumpah_order", "pos_first")
     vow = context.user_data.get("sumpah_vow_num", 0)
     en  = context.user_data.get("sumpah_vow_en", "")
     id_ = context.user_data.get("sumpah_vow_id", "")
-    await update.message.reply_text(
-        T("sumpah_refleksi_negatif", lang, vow=vow, en=en, id_=id_),
-        parse_mode="Markdown"
-    )
-    return SUMPAH_REFLEKSI_NEGATIF
+
+    if order == "neg_first":
+        # Positive was Q2 — now ask Q3 (plan), show the negative from Q1
+        negatif = context.user_data.get("sumpah_negatif", "")
+        await update.message.reply_text(
+            T("sumpah_refleksi_rencana", lang, negatif=_esc_md(negatif)),
+            parse_mode="Markdown"
+        )
+        return SUMPAH_REFLEKSI_RENCANA
+    else:
+        # Positive was Q1 — now ask Q2 (negative), show vow again
+        await update.message.reply_text(
+            T("sumpah_refleksi_negatif", lang, vow=vow, en=en, id_=id_),
+            parse_mode="Markdown"
+        )
+        return SUMPAH_REFLEKSI_NEGATIF
 
 
 async def terima_sumpah_negatif(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await _lang(update.effective_user.id, context)
     negatif = update.message.text
     context.user_data["sumpah_negatif"] = negatif
-    await update.message.reply_text(
-        T("sumpah_refleksi_rencana", lang, negatif=_esc_md(negatif)),
-        parse_mode="Markdown"
-    )
-    return SUMPAH_REFLEKSI_RENCANA
+    order = context.user_data.get("sumpah_order", "pos_first")
+    vow = context.user_data.get("sumpah_vow_num", 0)
+    en  = context.user_data.get("sumpah_vow_en", "")
+    id_ = context.user_data.get("sumpah_vow_id", "")
+
+    if order == "neg_first":
+        # Negative was Q1 — now ask Q2 (positive), show vow again
+        await update.message.reply_text(
+            T("sumpah_refleksi_positif_q2", lang, vow=vow, en=en, id_=id_),
+            parse_mode="Markdown"
+        )
+        return SUMPAH_REFLEKSI_POSITIF
+    else:
+        # Negative was Q2 — now ask Q3 (plan), show the negative
+        await update.message.reply_text(
+            T("sumpah_refleksi_rencana", lang, negatif=_esc_md(negatif)),
+            parse_mode="Markdown"
+        )
+        return SUMPAH_REFLEKSI_RENCANA
 
 
 async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -687,7 +752,8 @@ async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TY
         parse_mode="Markdown"
     )
     for key in ["sumpah_positif","sumpah_negatif","sumpah_vow_num",
-                "sumpah_vow_en","sumpah_vow_id","sumpah_vow_jam","sumpah_vow_label"]:
+                "sumpah_vow_en","sumpah_vow_id","sumpah_vow_jam","sumpah_vow_label",
+                "sumpah_order"]:
         context.user_data.pop(key, None)
     return ConversationHandler.END
 
@@ -1509,7 +1575,8 @@ def build_conversation_handler():
             ],
             PILIH_REFLEKSI: [
                 CallbackQueryHandler(pilih_kebajikan_refleksi_cb, pattern="^refleksi_k_"),
-                CallbackQueryHandler(pilih_sumpah_slot_cb, pattern="^sumpah_slot_"),
+                CallbackQueryHandler(pilih_sumpah_slot_cb,        pattern="^sumpah_slot_"),
+                CallbackQueryHandler(sumpah_urutan_cb,            pattern="^sumpah_order_"),
             ],
             PILIH_SESI_REFLEKSI: [
                 CallbackQueryHandler(pilih_sesi_refleksi_cb, pattern="^refleksi_sesi_"),

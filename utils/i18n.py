@@ -324,18 +324,16 @@ STRINGS = {
 
     "tambahan_malam_prompt": {
         "id": (
-            "🌙 *Laporan Malam*\n\n"
-            "Sebelum hari berakhir — adakah *perbuatan baik lainnya* yang sudah Anda lakukan "
-            "hari ini yang belum tercatat?\n\n"
-            "Ceritakan di sini, seberapapun kecilnya. 🙏\n\n"
-            "_Ketuk 'Tidak ada' jika sudah lengkap._"
+            "✨ *Catat Perbuatan Baik*\n\n"
+            "Adakah *perbuatan baik* yang sudah Anda lakukan hari ini yang ingin dicatat?\n\n"
+            "Ceritakan di sini, seberapapun kecilnya — setiap bibit berharga. 🙏\n\n"
+            "_Catatan ini akan ditampilkan saat meditasi malam. Ketuk 'Tidak ada' jika tidak ada._"
         ),
         "en": (
-            "🌙 *Evening Report*\n\n"
-            "Before the day ends — are there any *other good deeds* you did today "
-            "that haven't been recorded yet?\n\n"
-            "Share them here, no matter how small. 🙏\n\n"
-            "_Tap 'None' if you're all done._"
+            "✨ *Log Good Deeds*\n\n"
+            "Are there any *good deeds* you've done today that you'd like to record?\n\n"
+            "Share them here, no matter how small — every seed counts. 🙏\n\n"
+            "_These will be shown during your evening meditation. Tap 'None' if there are none._"
         ),
     },
     "tambahan_tidak_ada_label": {"id": "✅ Tidak ada tambahan", "en": "✅ None"},
@@ -397,6 +395,27 @@ STRINGS = {
 
     "sumpah_label_advanced": {"id": "Sumpah Bodhisattva 🪷", "en": "Bodhisattva Vow 🪷"},
     "sumpah_label_super":    {"id": "Sumpah Tantra 💎",       "en": "Tantric Vow 💎"},
+    "sumpah_pilih_urutan": {
+        "id": (
+            "📿 *{label}*\n"
+            "*{jam} — Sumpah #{vow}*\n\n"
+            "🇬🇧 _{en}_\n\n"
+            "🇮🇩 _{id_}_\n\n"
+            "─────────────────────\n"
+            "_Anda akan menjawab 3 pertanyaan. Mulai dari mana?_"
+        ),
+        "en": (
+            "📿 *{label}*\n"
+            "*{jam} — Vow #{vow}*\n\n"
+            "🇬🇧 _{en}_\n\n"
+            "🇮🇩 _{id_}_\n\n"
+            "─────────────────────\n"
+            "_You will answer 3 questions. Where would you like to start?_"
+        ),
+    },
+    "sumpah_order_pos_label": {"id": "✅ Mulai dari positif",  "en": "✅ Start with positives"},
+    "sumpah_order_neg_label": {"id": "⚠️ Mulai dari negatif", "en": "⚠️ Start with negatives"},
+
     "sumpah_refleksi_positif": {
         "id": (
             "📿 *{label}*\n"
@@ -465,6 +484,54 @@ STRINGS = {
             "_Even one small action is enough._"
         ),
     },
+    # Neg-first order variants
+    "sumpah_refleksi_negatif_q1": {
+        "id": (
+            "📿 *Sumpah #{vow}*\n\n"
+            "🇬🇧 _{en}_\n\n"
+            "🇮🇩 _{id_}_\n\n"
+            "─────────────────────\n"
+            "_Anda akan menjawab 3 pertanyaan terkait sumpah ini._\n\n"
+            "⚠️ *Pertanyaan 1 dari 3*\n\n"
+            "Adakah perbuatan, perkataan, atau pikiran yang TIDAK SESUAI dengan sumpah ini "
+            "dalam 24 jam terakhir?\n\n"
+            "_Jawab dengan jujur — ini bukan untuk dihakimi, tapi untuk disadari._"
+        ),
+        "en": (
+            "📿 *Vow #{vow}*\n\n"
+            "🇬🇧 _{en}_\n\n"
+            "🇮🇩 _{id_}_\n\n"
+            "─────────────────────\n"
+            "_You will answer 3 questions related to this vow._\n\n"
+            "⚠️ *Question 1 of 3*\n\n"
+            "Were there any actions, words, or thoughts OUT OF LINE with this vow "
+            "in the last 24 hours?\n\n"
+            "_Answer honestly — this is not for judgment, but for awareness._"
+        ),
+    },
+    "sumpah_refleksi_positif_q2": {
+        "id": (
+            "📿 *Sumpah #{vow}*\n\n"
+            "🇬🇧 _{en}_\n\n"
+            "🇮🇩 _{id_}_\n\n"
+            "─────────────────────\n\n"
+            "✅ *Pertanyaan 2 dari 3*\n\n"
+            "Selama 24 jam terakhir, adakah perbuatan, perkataan, atau pikiran yang "
+            "SESUAI dengan sumpah ini?\n\n"
+            "_Bahkan niat pun sudah menjadi bibit._"
+        ),
+        "en": (
+            "📿 *Vow #{vow}*\n\n"
+            "🇬🇧 _{en}_\n\n"
+            "🇮🇩 _{id_}_\n\n"
+            "─────────────────────\n\n"
+            "✅ *Question 2 of 3*\n\n"
+            "In the last 24 hours, were there any actions, words, or thoughts "
+            "IN LINE with this vow?\n\n"
+            "_Even an intention is already a seed._"
+        ),
+    },
+
     "sumpah_refleksi_konfirmasi": {
         "id": (
             "✨ *Catatan Sumpah #{vow} tersimpan:*\n\n"
