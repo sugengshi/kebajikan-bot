@@ -484,7 +484,7 @@ STRINGS = {
             "_Even one small action is enough._"
         ),
     },
-    # Neg-first order variants
+    # Neg-first order variants  (neg → plan → pos)
     "sumpah_refleksi_negatif_q1": {
         "id": (
             "📿 *Sumpah #{vow}*\n\n"
@@ -509,13 +509,33 @@ STRINGS = {
             "_Answer honestly — this is not for judgment, but for awareness._"
         ),
     },
-    "sumpah_refleksi_positif_q2": {
+    "sumpah_refleksi_rencana_q2": {
+        "id": (
+            "⚠️ *Catatan negatif Anda:*\n"
+            "{negatif}\n\n"
+            "─────────────────────\n\n"
+            "🌱 *Pertanyaan 2 dari 3*\n\n"
+            "Untuk menyeimbangkan catatan di atas, apa rencana konkret yang "
+            "akan Anda lakukan dalam 24 jam ke depan?\n\n"
+            "_Satu tindakan kecil pun sudah cukup._"
+        ),
+        "en": (
+            "⚠️ *Your negative note:*\n"
+            "{negatif}\n\n"
+            "─────────────────────\n\n"
+            "🌱 *Question 2 of 3*\n\n"
+            "To balance the note above, what concrete plan will "
+            "you carry out in the next 24 hours?\n\n"
+            "_Even one small action is enough._"
+        ),
+    },
+    "sumpah_refleksi_positif_q3": {
         "id": (
             "📿 *Sumpah #{vow}*\n\n"
             "🇬🇧 _{en}_\n\n"
             "🇮🇩 _{id_}_\n\n"
             "─────────────────────\n\n"
-            "✅ *Pertanyaan 2 dari 3*\n\n"
+            "✅ *Pertanyaan 3 dari 3*\n\n"
             "Selama 24 jam terakhir, adakah perbuatan, perkataan, atau pikiran yang "
             "SESUAI dengan sumpah ini?\n\n"
             "_Bahkan niat pun sudah menjadi bibit._"
@@ -525,7 +545,7 @@ STRINGS = {
             "🇬🇧 _{en}_\n\n"
             "🇮🇩 _{id_}_\n\n"
             "─────────────────────\n\n"
-            "✅ *Question 2 of 3*\n\n"
+            "✅ *Question 3 of 3*\n\n"
             "In the last 24 hours, were there any actions, words, or thoughts "
             "IN LINE with this vow?\n\n"
             "_Even an intention is already a seed._"

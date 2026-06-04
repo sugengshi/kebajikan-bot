@@ -686,22 +686,34 @@ def _esc_md(text: str) -> str:
 
 async def terima_sumpah_positif(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await _lang(update.effective_user.id, context)
-    context.user_data["sumpah_positif"] = update.message.text
     order = context.user_data.get("sumpah_order", "pos_first")
-    vow = context.user_data.get("sumpah_vow_num", 0)
-    en  = context.user_data.get("sumpah_vow_en", "")
-    id_ = context.user_data.get("sumpah_vow_id", "")
 
     if order == "neg_first":
-        # Positive was Q2 — now ask Q3 (plan), show the negative from Q1
+        # Positive is Q3 (final) — save everything now
+        user_id = update.effective_user.id
+        positif = update.message.text
         negatif = context.user_data.get("sumpah_negatif", "")
+        rencana = context.user_data.get("sumpah_rencana", "")
+        vow = context.user_data.get("sumpah_vow_num", 0)
+        jam = context.user_data.get("sumpah_vow_jam", "")
+        sesi = f"slot_{jam}" if jam else _sesi_sekarang()
+        await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
         await update.message.reply_text(
-            T("sumpah_refleksi_rencana", lang, negatif=_esc_md(negatif)),
+            T("sumpah_refleksi_konfirmasi", lang, vow=vow,
+              positif=positif, negatif=negatif, rencana=rencana),
             parse_mode="Markdown"
         )
-        return SUMPAH_REFLEKSI_RENCANA
+        for key in ["sumpah_positif","sumpah_negatif","sumpah_rencana","sumpah_vow_num",
+                    "sumpah_vow_en","sumpah_vow_id","sumpah_vow_jam","sumpah_vow_label",
+                    "sumpah_order"]:
+            context.user_data.pop(key, None)
+        return ConversationHandler.END
     else:
-        # Positive was Q1 — now ask Q2 (negative), show vow again
+        # Positive is Q1 — now ask Q2 (negative), show vow again
+        context.user_data["sumpah_positif"] = update.message.text
+        vow = context.user_data.get("sumpah_vow_num", 0)
+        en  = context.user_data.get("sumpah_vow_en", "")
+        id_ = context.user_data.get("sumpah_vow_id", "")
         await update.message.reply_text(
             T("sumpah_refleksi_negatif", lang, vow=vow, en=en, id_=id_),
             parse_mode="Markdown"
@@ -719,12 +731,12 @@ async def terima_sumpah_negatif(update: Update, context: ContextTypes.DEFAULT_TY
     id_ = context.user_data.get("sumpah_vow_id", "")
 
     if order == "neg_first":
-        # Negative was Q1 — now ask Q2 (positive), show vow again
+        # Negative was Q1 — now ask Q2 (plan/todo), show the negative
         await update.message.reply_text(
-            T("sumpah_refleksi_positif_q2", lang, vow=vow, en=en, id_=id_),
+            T("sumpah_refleksi_rencana_q2", lang, negatif=_esc_md(negatif)),
             parse_mode="Markdown"
         )
-        return SUMPAH_REFLEKSI_POSITIF
+        return SUMPAH_REFLEKSI_RENCANA
     else:
         # Negative was Q2 — now ask Q3 (plan), show the negative
         await update.message.reply_text(
@@ -737,12 +749,25 @@ async def terima_sumpah_negatif(update: Update, context: ContextTypes.DEFAULT_TY
 async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = await _lang(user_id, context)
+    rencana = update.message.text
+    order = context.user_data.get("sumpah_order", "pos_first")
+
+    if order == "neg_first":
+        # Plan was Q2 — save rencana to context, now ask Q3 (positive), show vow
+        context.user_data["sumpah_rencana"] = rencana
+        vow = context.user_data.get("sumpah_vow_num", 0)
+        en  = context.user_data.get("sumpah_vow_en", "")
+        id_ = context.user_data.get("sumpah_vow_id", "")
+        await update.message.reply_text(
+            T("sumpah_refleksi_positif_q3", lang, vow=vow, en=en, id_=id_),
+            parse_mode="Markdown"
+        )
+        return SUMPAH_REFLEKSI_POSITIF
+
+    # pos_first: plan was Q3 — save everything now
     vow = context.user_data.get("sumpah_vow_num", 0)
     positif = context.user_data.get("sumpah_positif", "")
     negatif = context.user_data.get("sumpah_negatif", "")
-    rencana = update.message.text
-    # For advanced/super: use the vow's time slot as sesi to allow all 6 to be saved
-    # e.g. "slot_07:00", "slot_09:30" — avoids UNIQUE constraint collision
     jam = context.user_data.get("sumpah_vow_jam", "")
     sesi = f"slot_{jam}" if jam else _sesi_sekarang()
     await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
@@ -751,7 +776,7 @@ async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TY
           positif=positif, negatif=negatif, rencana=rencana),
         parse_mode="Markdown"
     )
-    for key in ["sumpah_positif","sumpah_negatif","sumpah_vow_num",
+    for key in ["sumpah_positif","sumpah_negatif","sumpah_rencana","sumpah_vow_num",
                 "sumpah_vow_en","sumpah_vow_id","sumpah_vow_jam","sumpah_vow_label",
                 "sumpah_order"]:
         context.user_data.pop(key, None)
