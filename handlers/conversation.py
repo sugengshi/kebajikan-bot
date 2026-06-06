@@ -480,31 +480,29 @@ async def reflect_vow_from_scheduler_cb(update: Update, context: ContextTypes.DE
         await query.message.reply_text(T("silakan_start", lang))
         return ConversationHandler.END
 
-    vow = vows[slot_index]
-    if isinstance(vow, list):
-        vow = vow[0]
-
-    en, id_ = vow_dict.get(vow, ("?", "?"))
+    vow_raw = vows[slot_index]
     label_key = "sumpah_label_advanced" if level == "advanced" else "sumpah_label_super"
     label = T(label_key, lang)
 
-    # Store context for Q1→Q2→Q3 flow
-    context.user_data["lang"] = lang
-    context.user_data["sumpah_vow_num"] = vow
-    context.user_data["sumpah_vow_en"] = en
-    context.user_data["sumpah_vow_id"] = id_
-    context.user_data["sumpah_vow_jam"] = jam
-    context.user_data["sumpah_vow_label"] = label
-    context.user_data["sumpah_vows_today"] = vows
-    context.user_data["sumpah_times_today"] = times
-    context.user_data["sumpah_level"] = level
+    p = _build_vow_params(vow_raw, vow_dict)
+    context.user_data["lang"]                = lang
+    context.user_data["sumpah_vow_num"]      = p["vow_num"]
+    context.user_data["sumpah_vow_en"]       = p["en"]
+    context.user_data["sumpah_vow_id"]       = p["id_"]
+    context.user_data["sumpah_vow_nums_str"] = p["nums_str"]
+    context.user_data["sumpah_vow_block"]    = p["vow_block"]
+    context.user_data["sumpah_vow_jam"]      = jam
+    context.user_data["sumpah_vow_label"]    = label
+    context.user_data["sumpah_vows_today"]   = vows
+    context.user_data["sumpah_times_today"]  = times
+    context.user_data["sumpah_level"]        = level
 
     kb = InlineKeyboardMarkup([[
         InlineKeyboardButton(T("sumpah_order_pos_label", lang), callback_data="sumpah_order_pos_first"),
         InlineKeyboardButton(T("sumpah_order_neg_label", lang), callback_data="sumpah_order_neg_first"),
     ]])
     await query.message.reply_text(
-        T("sumpah_pilih_urutan", lang, label=label, jam=jam, vow=vow, en=en, id_=id_),
+        T("sumpah_pilih_urutan", lang, **_vow_ctx(context)),
         parse_mode="Markdown",
         reply_markup=kb
     )
@@ -617,23 +615,21 @@ async def pilih_sumpah_slot_cb(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.message.reply_text(T("silakan_start", lang))
         return ConversationHandler.END
 
-    vow = vows[slot_index]
-    if isinstance(vow, list):
-        vow = vow[0]  # use first of pair for reflection
-
+    vow_raw = vows[slot_index]
     jam = times[slot_index] if slot_index < len(times) else "?"
     from data.vows import ADVANCED_VOWS, SUPER_ADVANCED_VOWS
     vow_dict = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
-    en, id_ = vow_dict.get(vow, ("?", "?"))
     label_key = "sumpah_label_advanced" if level == "advanced" else "sumpah_label_super"
     label = T(label_key, lang)
 
-    # Store for the 3-question flow
-    context.user_data["sumpah_vow_num"] = vow
-    context.user_data["sumpah_vow_en"] = en
-    context.user_data["sumpah_vow_id"] = id_
-    context.user_data["sumpah_vow_jam"] = jam
-    context.user_data["sumpah_vow_label"] = label
+    p = _build_vow_params(vow_raw, vow_dict)
+    context.user_data["sumpah_vow_num"]      = p["vow_num"]
+    context.user_data["sumpah_vow_en"]       = p["en"]
+    context.user_data["sumpah_vow_id"]       = p["id_"]
+    context.user_data["sumpah_vow_nums_str"] = p["nums_str"]
+    context.user_data["sumpah_vow_block"]    = p["vow_block"]
+    context.user_data["sumpah_vow_jam"]      = jam
+    context.user_data["sumpah_vow_label"]    = label
 
     await query.edit_message_reply_markup(reply_markup=None)
     kb = InlineKeyboardMarkup([[
@@ -641,7 +637,7 @@ async def pilih_sumpah_slot_cb(update: Update, context: ContextTypes.DEFAULT_TYP
         InlineKeyboardButton(T("sumpah_order_neg_label", lang), callback_data="sumpah_order_neg_first"),
     ]])
     await query.message.reply_text(
-        T("sumpah_pilih_urutan", lang, label=label, jam=jam, vow=vow, en=en, id_=id_),
+        T("sumpah_pilih_urutan", lang, **_vow_ctx(context)),
         parse_mode="Markdown",
         reply_markup=kb
     )
@@ -665,13 +661,13 @@ async def sumpah_urutan_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_reply_markup(reply_markup=None)
     if order == "neg_first":
         await query.message.reply_text(
-            T("sumpah_refleksi_negatif_q1", lang, vow=vow, en=en, id_=id_),
+            T("sumpah_refleksi_negatif_q1", lang, **_vow_ctx(context)),
             parse_mode="Markdown"
         )
         return SUMPAH_REFLEKSI_NEGATIF
     else:
         await query.message.reply_text(
-            T("sumpah_refleksi_positif", lang, label=label, jam=jam, vow=vow, en=en, id_=id_),
+            T("sumpah_refleksi_positif", lang, **_vow_ctx(context)),
             parse_mode="Markdown"
         )
         return SUMPAH_REFLEKSI_POSITIF
@@ -682,6 +678,39 @@ def _esc_md(text: str) -> str:
     for ch in ("_", "*", "`", "["):
         text = text.replace(ch, f"\\{ch}")
     return text
+
+
+def _build_vow_params(vow_raw, vow_dict: dict) -> dict:
+    """Return nums_str and vow_block for a single vow number or a [264,265] pair."""
+    if isinstance(vow_raw, list):
+        nums_str = " & ".join(f"#{v}" for v in vow_raw)
+        en_lines = "\n".join(f"🇬🇧 _{vow_dict.get(v, ('?','?'))[0]}_" for v in vow_raw)
+        id_lines = "\n".join(f"🇮🇩 _{vow_dict.get(v, ('?','?'))[1]}_" for v in vow_raw)
+        vow_block = f"{en_lines}\n\n{id_lines}"
+        vow_num = vow_raw[0]
+        en = vow_dict.get(vow_num, ("?", "?"))[0]
+        id_ = vow_dict.get(vow_num, ("?", "?"))[1]
+    else:
+        vow_num = vow_raw
+        en, id_ = vow_dict.get(vow_num, ("?", "?"))
+        nums_str = f"#{vow_num}"
+        vow_block = f"🇬🇧 _{en}_\n\n🇮🇩 _{id_}_"
+    return {"vow_num": vow_num, "nums_str": nums_str, "vow_block": vow_block,
+            "en": en, "id_": id_}
+
+
+def _vow_ctx(context) -> dict:
+    """Read stored vow params from context for T() calls."""
+    vow = context.user_data.get("sumpah_vow_num", 0)
+    return {
+        "vow": vow,
+        "nums_str": context.user_data.get("sumpah_vow_nums_str", f"#{vow}"),
+        "vow_block": context.user_data.get("sumpah_vow_block", ""),
+        "label": context.user_data.get("sumpah_vow_label", ""),
+        "jam": context.user_data.get("sumpah_vow_jam", ""),
+        "en": context.user_data.get("sumpah_vow_en", ""),
+        "id_": context.user_data.get("sumpah_vow_id", ""),
+    }
 
 
 async def terima_sumpah_positif(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -695,27 +724,25 @@ async def terima_sumpah_positif(update: Update, context: ContextTypes.DEFAULT_TY
         negatif = context.user_data.get("sumpah_negatif", "")
         rencana = context.user_data.get("sumpah_rencana", "")
         vow = context.user_data.get("sumpah_vow_num", 0)
+        nums_str = context.user_data.get("sumpah_vow_nums_str", f"#{vow}")
         jam = context.user_data.get("sumpah_vow_jam", "")
         sesi = f"slot_{jam}" if jam else _sesi_sekarang()
         await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
         await update.message.reply_text(
-            T("sumpah_refleksi_konfirmasi", lang, vow=vow,
+            T("sumpah_refleksi_konfirmasi", lang, vow=vow, nums_str=nums_str,
               positif=positif, negatif=negatif, rencana=rencana),
             parse_mode="Markdown"
         )
         for key in ["sumpah_positif","sumpah_negatif","sumpah_rencana","sumpah_vow_num",
-                    "sumpah_vow_en","sumpah_vow_id","sumpah_vow_jam","sumpah_vow_label",
-                    "sumpah_order"]:
+                    "sumpah_vow_en","sumpah_vow_id","sumpah_vow_nums_str","sumpah_vow_block",
+                    "sumpah_vow_jam","sumpah_vow_label","sumpah_order"]:
             context.user_data.pop(key, None)
         return ConversationHandler.END
     else:
         # Positive is Q1 — now ask Q2 (negative), show vow again
         context.user_data["sumpah_positif"] = update.message.text
-        vow = context.user_data.get("sumpah_vow_num", 0)
-        en  = context.user_data.get("sumpah_vow_en", "")
-        id_ = context.user_data.get("sumpah_vow_id", "")
         await update.message.reply_text(
-            T("sumpah_refleksi_negatif", lang, vow=vow, en=en, id_=id_),
+            T("sumpah_refleksi_negatif", lang, **_vow_ctx(context)),
             parse_mode="Markdown"
         )
         return SUMPAH_REFLEKSI_NEGATIF
@@ -755,30 +782,28 @@ async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TY
     if order == "neg_first":
         # Plan was Q2 — save rencana to context, now ask Q3 (positive), show vow
         context.user_data["sumpah_rencana"] = rencana
-        vow = context.user_data.get("sumpah_vow_num", 0)
-        en  = context.user_data.get("sumpah_vow_en", "")
-        id_ = context.user_data.get("sumpah_vow_id", "")
         await update.message.reply_text(
-            T("sumpah_refleksi_positif_q3", lang, vow=vow, en=en, id_=id_),
+            T("sumpah_refleksi_positif_q3", lang, **_vow_ctx(context)),
             parse_mode="Markdown"
         )
         return SUMPAH_REFLEKSI_POSITIF
 
     # pos_first: plan was Q3 — save everything now
     vow = context.user_data.get("sumpah_vow_num", 0)
+    nums_str = context.user_data.get("sumpah_vow_nums_str", f"#{vow}")
     positif = context.user_data.get("sumpah_positif", "")
     negatif = context.user_data.get("sumpah_negatif", "")
     jam = context.user_data.get("sumpah_vow_jam", "")
     sesi = f"slot_{jam}" if jam else _sesi_sekarang()
     await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
     await update.message.reply_text(
-        T("sumpah_refleksi_konfirmasi", lang, vow=vow,
+        T("sumpah_refleksi_konfirmasi", lang, vow=vow, nums_str=nums_str,
           positif=positif, negatif=negatif, rencana=rencana),
         parse_mode="Markdown"
     )
     for key in ["sumpah_positif","sumpah_negatif","sumpah_rencana","sumpah_vow_num",
-                "sumpah_vow_en","sumpah_vow_id","sumpah_vow_jam","sumpah_vow_label",
-                "sumpah_order"]:
+                "sumpah_vow_en","sumpah_vow_id","sumpah_vow_nums_str","sumpah_vow_block",
+                "sumpah_vow_jam","sumpah_vow_label","sumpah_order"]:
         context.user_data.pop(key, None)
     return ConversationHandler.END
 

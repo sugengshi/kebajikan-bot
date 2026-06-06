@@ -398,17 +398,15 @@ STRINGS = {
     "sumpah_pilih_urutan": {
         "id": (
             "📿 *{label}*\n"
-            "*{jam} — Sumpah #{vow}*\n\n"
-            "🇬🇧 _{en}_\n\n"
-            "🇮🇩 _{id_}_\n\n"
+            "*{jam} — Sumpah {nums_str}*\n\n"
+            "{vow_block}\n\n"
             "─────────────────────\n"
             "_Anda akan menjawab 3 pertanyaan. Mulai dari mana?_"
         ),
         "en": (
             "📿 *{label}*\n"
-            "*{jam} — Vow #{vow}*\n\n"
-            "🇬🇧 _{en}_\n\n"
-            "🇮🇩 _{id_}_\n\n"
+            "*{jam} — Vow {nums_str}*\n\n"
+            "{vow_block}\n\n"
             "─────────────────────\n"
             "_You will answer 3 questions. Where would you like to start?_"
         ),
@@ -419,9 +417,8 @@ STRINGS = {
     "sumpah_refleksi_positif": {
         "id": (
             "📿 *{label}*\n"
-            "*{jam} — Sumpah #{vow}*\n\n"
-            "🇬🇧 _{en}_\n\n"
-            "🇮🇩 _{id_}_\n\n"
+            "*{jam} — Sumpah {nums_str}*\n\n"
+            "{vow_block}\n\n"
             "─────────────────────\n"
             "_Anda akan menjawab 3 pertanyaan terkait sumpah ini._\n\n"
             "✅ *Pertanyaan 1 dari 3*\n\n"
@@ -431,9 +428,8 @@ STRINGS = {
         ),
         "en": (
             "📿 *{label}*\n"
-            "*{jam} — Vow #{vow}*\n\n"
-            "🇬🇧 _{en}_\n\n"
-            "🇮🇩 _{id_}_\n\n"
+            "*{jam} — Vow {nums_str}*\n\n"
+            "{vow_block}\n\n"
             "─────────────────────\n"
             "_You will answer 3 questions related to this vow._\n\n"
             "✅ *Question 1 of 3*\n\n"
@@ -444,9 +440,8 @@ STRINGS = {
     },
     "sumpah_refleksi_negatif": {
         "id": (
-            "📿 *Sumpah #{vow}*\n\n"
-            "🇬🇧 _{en}_\n\n"
-            "🇮🇩 _{id_}_\n\n"
+            "📿 *Sumpah {nums_str}*\n\n"
+            "{vow_block}\n\n"
             "─────────────────────\n\n"
             "⚠️ *Pertanyaan 2 dari 3*\n\n"
             "Adakah perbuatan, perkataan, atau pikiran yang TIDAK SESUAI dengan sumpah ini "
@@ -454,9 +449,8 @@ STRINGS = {
             "_Jawab dengan jujur — ini bukan untuk dihakimi, tapi untuk disadari._"
         ),
         "en": (
-            "📿 *Vow #{vow}*\n\n"
-            "🇬🇧 _{en}_\n\n"
-            "🇮🇩 _{id_}_\n\n"
+            "📿 *Vow {nums_str}*\n\n"
+            "{vow_block}\n\n"
             "─────────────────────\n\n"
             "⚠️ *Question 2 of 3*\n\n"
             "Were there any actions, words, or thoughts OUT OF LINE with this vow "
@@ -487,9 +481,8 @@ STRINGS = {
     # Neg-first order variants  (neg → plan → pos)
     "sumpah_refleksi_negatif_q1": {
         "id": (
-            "📿 *Sumpah #{vow}*\n\n"
-            "🇬🇧 _{en}_\n\n"
-            "🇮🇩 _{id_}_\n\n"
+            "📿 *Sumpah {nums_str}*\n\n"
+            "{vow_block}\n\n"
             "─────────────────────\n"
             "_Anda akan menjawab 3 pertanyaan terkait sumpah ini._\n\n"
             "⚠️ *Pertanyaan 1 dari 3*\n\n"
@@ -498,9 +491,8 @@ STRINGS = {
             "_Jawab dengan jujur — ini bukan untuk dihakimi, tapi untuk disadari._"
         ),
         "en": (
-            "📿 *Vow #{vow}*\n\n"
-            "🇬🇧 _{en}_\n\n"
-            "🇮🇩 _{id_}_\n\n"
+            "📿 *Vow {nums_str}*\n\n"
+            "{vow_block}\n\n"
             "─────────────────────\n"
             "_You will answer 3 questions related to this vow._\n\n"
             "⚠️ *Question 1 of 3*\n\n"
@@ -531,9 +523,8 @@ STRINGS = {
     },
     "sumpah_refleksi_positif_q3": {
         "id": (
-            "📿 *Sumpah #{vow}*\n\n"
-            "🇬🇧 _{en}_\n\n"
-            "🇮🇩 _{id_}_\n\n"
+            "📿 *Sumpah {nums_str}*\n\n"
+            "{vow_block}\n\n"
             "─────────────────────\n\n"
             "✅ *Pertanyaan 3 dari 3*\n\n"
             "Selama 24 jam terakhir, adakah perbuatan, perkataan, atau pikiran yang "
@@ -541,9 +532,8 @@ STRINGS = {
             "_Bahkan niat pun sudah menjadi bibit._"
         ),
         "en": (
-            "📿 *Vow #{vow}*\n\n"
-            "🇬🇧 _{en}_\n\n"
-            "🇮🇩 _{id_}_\n\n"
+            "📿 *Vow {nums_str}*\n\n"
+            "{vow_block}\n\n"
             "─────────────────────\n\n"
             "✅ *Question 3 of 3*\n\n"
             "In the last 24 hours, were there any actions, words, or thoughts "
@@ -554,14 +544,14 @@ STRINGS = {
 
     "sumpah_refleksi_konfirmasi": {
         "id": (
-            "✨ *Catatan Sumpah #{vow} tersimpan:*\n\n"
+            "✨ *Catatan Sumpah {nums_str} tersimpan:*\n\n"
             "✅ *Sesuai:* {positif}\n\n"
             "⚠️ *Perlu diseimbangkan:* {negatif}\n\n"
             "🌱 *Rencana:* {rencana}\n\n"
             "Terima kasih! 🙏"
         ),
         "en": (
-            "✨ *Vow #{vow} notes saved:*\n\n"
+            "✨ *Vow {nums_str} notes saved:*\n\n"
             "✅ *In line:* {positif}\n\n"
             "⚠️ *To balance:* {negatif}\n\n"
             "🌱 *Plan:* {rencana}\n\n"
