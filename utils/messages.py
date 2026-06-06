@@ -126,6 +126,7 @@ def format_ringkasan_positif(catatan_list: list, tambahan_list: list, lang: str 
     now = datetime.now(WIB).strftime("%d %B %Y")
     lines = [T("ringkasan_judul", lang, tanggal=now)]
 
+    catatan_list = _dedup_slot_entries(catatan_list)
     catatan_list = sorted(catatan_list, key=lambda c: _sort_key(c, vow_time_map))
     ada_isi = False
     for c in catatan_list:
@@ -174,6 +175,32 @@ def format_ringkasan_positif(catatan_list: list, tambahan_list: list, lang: str 
     lines.append("─────────────────────")
     lines.append("─────────────────────")
     return "\n".join(lines)
+
+
+def _dedup_slot_entries(catatan_list: list) -> list:
+    """Remove duplicate slot_ entries for the same vow.
+
+    When a vow was reflected on twice (e.g. once before pair-vow fix saved it
+    as 'slot_19:30', then again after as 'slot_19:30_264'), keep only the
+    more-specific entry (the one whose sesi ends with _{vow_id}).
+    """
+    seen: dict = {}   # k_id -> index in result
+    result = []
+    for c in catatan_list:
+        sesi  = c.get("sesi", "")
+        k_id  = c.get("kebajikan_id", 0)
+        if sesi.startswith("slot_") and k_id:
+            if k_id not in seen:
+                seen[k_id] = len(result)
+                result.append(c)
+            else:
+                # Prefer the sesi that ends with _{k_id} (more specific)
+                existing_sesi = result[seen[k_id]].get("sesi", "")
+                if sesi.endswith(f"_{k_id}") and not existing_sesi.endswith(f"_{k_id}"):
+                    result[seen[k_id]] = c
+        else:
+            result.append(c)
+    return result
 
 
 def _get_entry_header(c: dict, lang: str, hide_sesi_label: bool = False, vow_time_map: dict = None) -> str:
@@ -319,6 +346,7 @@ def format_laporan_lengkap(catatan_list: list, tambahan_list: list, lang: str = 
     neg_label  = T("arsip_negatif_label", lang)
     plan_label = T("arsip_rencana_label", lang)
 
+    catatan_list = _dedup_slot_entries(catatan_list)
     catatan_list = sorted(catatan_list, key=lambda c: _sort_key(c, vow_time_map))
     hide = _is_advanced_list(catatan_list)
     for c in catatan_list:
