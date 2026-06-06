@@ -663,6 +663,10 @@ async def sumpah_urutan_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     label = context.user_data.get("sumpah_vow_label", "")
     jam   = context.user_data.get("sumpah_vow_jam", "")
 
+    # Narrow to single-vow display for Q1/Q2/Q3 (overview already showed both)
+    context.user_data["sumpah_vow_nums_str"] = f"#{vow}"
+    context.user_data["sumpah_vow_block"]    = f"🇬🇧 _{en}_\n\n🇮🇩 _{id_}_"
+
     await query.edit_message_reply_markup(reply_markup=None)
     if order == "neg_first":
         await query.message.reply_text(
