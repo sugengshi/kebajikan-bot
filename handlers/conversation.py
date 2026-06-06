@@ -496,16 +496,19 @@ async def reflect_vow_from_scheduler_cb(update: Update, context: ContextTypes.DE
     context.user_data["sumpah_vows_today"]   = vows
     context.user_data["sumpah_times_today"]  = times
     context.user_data["sumpah_level"]        = level
+    context.user_data["sumpah_pair_next"]    = p["pair_next"]
+    context.user_data["sumpah_was_pair"]     = p["pair_next"] is not None
 
     kb = InlineKeyboardMarkup([[
         InlineKeyboardButton(T("sumpah_order_pos_label", lang), callback_data="sumpah_order_pos_first"),
         InlineKeyboardButton(T("sumpah_order_neg_label", lang), callback_data="sumpah_order_neg_first"),
     ]])
-    await query.message.reply_text(
-        T("sumpah_pilih_urutan", lang, **_vow_ctx(context)),
-        parse_mode="Markdown",
-        reply_markup=kb
-    )
+    if p["pair_next"]:
+        prompt = T("sumpah_pilih_urutan_pair_intro", lang,
+                   **_vow_ctx(context), first_num=p["nums_str"])
+    else:
+        prompt = T("sumpah_pilih_urutan", lang, **_vow_ctx(context))
+    await query.message.reply_text(prompt, parse_mode="Markdown", reply_markup=kb)
     return PILIH_REFLEKSI
 
 
@@ -557,8 +560,7 @@ async def _tampilkan_pilihan_sumpah(message, context, lang: str, db_user: dict):
     for i, (t, v) in enumerate(zip(times, vows)):
         if isinstance(v, list):
             nums = " & ".join(str(n) for n in v)
-            vow_id = v[0]
-            status = "✅ " if vow_id in filled_vows else "○ "
+            status = "✅ " if all(vi in filled_vows for vi in v) else "○ "
             label = f"{status}{t} — #{nums}"
             cb = f"sumpah_slot_{i}"
         else:
@@ -630,17 +632,20 @@ async def pilih_sumpah_slot_cb(update: Update, context: ContextTypes.DEFAULT_TYP
     context.user_data["sumpah_vow_block"]    = p["vow_block"]
     context.user_data["sumpah_vow_jam"]      = jam
     context.user_data["sumpah_vow_label"]    = label
+    context.user_data["sumpah_pair_next"]    = p["pair_next"]   # None for single vows
+    context.user_data["sumpah_was_pair"]     = p["pair_next"] is not None
 
     await query.edit_message_reply_markup(reply_markup=None)
     kb = InlineKeyboardMarkup([[
         InlineKeyboardButton(T("sumpah_order_pos_label", lang), callback_data="sumpah_order_pos_first"),
         InlineKeyboardButton(T("sumpah_order_neg_label", lang), callback_data="sumpah_order_neg_first"),
     ]])
-    await query.message.reply_text(
-        T("sumpah_pilih_urutan", lang, **_vow_ctx(context)),
-        parse_mode="Markdown",
-        reply_markup=kb
-    )
+    if p["pair_next"]:
+        prompt = T("sumpah_pilih_urutan_pair_intro", lang,
+                   **_vow_ctx(context), first_num=p["nums_str"])
+    else:
+        prompt = T("sumpah_pilih_urutan", lang, **_vow_ctx(context))
+    await query.message.reply_text(prompt, parse_mode="Markdown", reply_markup=kb)
     return PILIH_REFLEKSI
 
 
@@ -681,22 +686,67 @@ def _esc_md(text: str) -> str:
 
 
 def _build_vow_params(vow_raw, vow_dict: dict) -> dict:
-    """Return nums_str and vow_block for a single vow number or a [264,265] pair."""
+    """Return nums_str, vow_block, and optional pair_next for a single or pair vow."""
     if isinstance(vow_raw, list):
         nums_str = " & ".join(f"#{v}" for v in vow_raw)
-        en_lines = "\n".join(f"🇬🇧 _{vow_dict.get(v, ('?','?'))[0]}_" for v in vow_raw)
-        id_lines = "\n".join(f"🇮🇩 _{vow_dict.get(v, ('?','?'))[1]}_" for v in vow_raw)
-        vow_block = f"{en_lines}\n\n{id_lines}"
+        # Show each vow in full with a visual separator between them
+        blocks = []
+        for v in vow_raw:
+            en_v, id_v = vow_dict.get(v, ("?", "?"))
+            blocks.append(f"*#{v}*\n🇬🇧 _{en_v}_\n🇮🇩 _{id_v}_")
+        vow_block = "\n\n— — —\n\n".join(blocks)
+        # First vow is what we reflect on first
         vow_num = vow_raw[0]
-        en = vow_dict.get(vow_num, ("?", "?"))[0]
-        id_ = vow_dict.get(vow_num, ("?", "?"))[1]
+        en, id_ = vow_dict.get(vow_num, ("?", "?"))
+        # Build "next" params for the second vow (single-vow style)
+        next_num = vow_raw[1]
+        next_en, next_id = vow_dict.get(next_num, ("?", "?"))
+        pair_next = {
+            "vow_num":   next_num,
+            "nums_str":  f"#{next_num}",
+            "vow_block": f"🇬🇧 _{next_en}_\n\n🇮🇩 _{next_id}_",
+            "en":        next_en,
+            "id_":       next_id,
+        }
     else:
         vow_num = vow_raw
         en, id_ = vow_dict.get(vow_num, ("?", "?"))
         nums_str = f"#{vow_num}"
         vow_block = f"🇬🇧 _{en}_\n\n🇮🇩 _{id_}_"
+        pair_next = None
     return {"vow_num": vow_num, "nums_str": nums_str, "vow_block": vow_block,
-            "en": en, "id_": id_}
+            "en": en, "id_": id_, "pair_next": pair_next}
+
+
+async def _maybe_transition_pair(message, context, lang: str, saved_vow: int, saved_nums: str) -> bool:
+    """If a pair-next vow is pending, transition to it. Returns True if transitioning."""
+    pair_next = context.user_data.pop("sumpah_pair_next", None)
+    if not pair_next:
+        return False
+    # Brief save confirmation for first vow
+    await message.reply_text(
+        T("sumpah_pair_transisi", lang,
+          saved_num=saved_nums, next_num=pair_next["nums_str"])
+    )
+    # Load second vow into context
+    context.user_data["sumpah_vow_num"]      = pair_next["vow_num"]
+    context.user_data["sumpah_vow_en"]       = pair_next["en"]
+    context.user_data["sumpah_vow_id"]       = pair_next["id_"]
+    context.user_data["sumpah_vow_nums_str"] = pair_next["nums_str"]
+    context.user_data["sumpah_vow_block"]    = pair_next["vow_block"]
+    # Clear previous answers and order choice
+    for key in ["sumpah_positif", "sumpah_negatif", "sumpah_rencana", "sumpah_order"]:
+        context.user_data.pop(key, None)
+    # Show order choice for second vow
+    kb = InlineKeyboardMarkup([[
+        InlineKeyboardButton(T("sumpah_order_pos_label", lang), callback_data="sumpah_order_pos_first"),
+        InlineKeyboardButton(T("sumpah_order_neg_label", lang), callback_data="sumpah_order_neg_first"),
+    ]])
+    await message.reply_text(
+        T("sumpah_pilih_urutan", lang, **_vow_ctx(context)),
+        parse_mode="Markdown", reply_markup=kb
+    )
+    return True
 
 
 def _vow_ctx(context) -> dict:
@@ -726,8 +776,11 @@ async def terima_sumpah_positif(update: Update, context: ContextTypes.DEFAULT_TY
         vow = context.user_data.get("sumpah_vow_num", 0)
         nums_str = context.user_data.get("sumpah_vow_nums_str", f"#{vow}")
         jam = context.user_data.get("sumpah_vow_jam", "")
-        sesi = f"slot_{jam}" if jam else _sesi_sekarang()
+        was_pair = context.user_data.get("sumpah_was_pair", False)
+        sesi = f"slot_{jam}_{vow}" if (jam and was_pair) else (f"slot_{jam}" if jam else _sesi_sekarang())
         await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
+        if await _maybe_transition_pair(update.message, context, lang, vow, nums_str):
+            return PILIH_REFLEKSI
         await update.message.reply_text(
             T("sumpah_refleksi_konfirmasi", lang, vow=vow, nums_str=nums_str,
               positif=positif, negatif=negatif, rencana=rencana),
@@ -735,7 +788,7 @@ async def terima_sumpah_positif(update: Update, context: ContextTypes.DEFAULT_TY
         )
         for key in ["sumpah_positif","sumpah_negatif","sumpah_rencana","sumpah_vow_num",
                     "sumpah_vow_en","sumpah_vow_id","sumpah_vow_nums_str","sumpah_vow_block",
-                    "sumpah_vow_jam","sumpah_vow_label","sumpah_order"]:
+                    "sumpah_vow_jam","sumpah_vow_label","sumpah_order","sumpah_was_pair"]:
             context.user_data.pop(key, None)
         return ConversationHandler.END
     else:
@@ -794,8 +847,11 @@ async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TY
     positif = context.user_data.get("sumpah_positif", "")
     negatif = context.user_data.get("sumpah_negatif", "")
     jam = context.user_data.get("sumpah_vow_jam", "")
-    sesi = f"slot_{jam}" if jam else _sesi_sekarang()
+    was_pair = context.user_data.get("sumpah_was_pair", False)
+    sesi = f"slot_{jam}_{vow}" if (jam and was_pair) else (f"slot_{jam}" if jam else _sesi_sekarang())
     await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
+    if await _maybe_transition_pair(update.message, context, lang, vow, nums_str):
+        return PILIH_REFLEKSI
     await update.message.reply_text(
         T("sumpah_refleksi_konfirmasi", lang, vow=vow, nums_str=nums_str,
           positif=positif, negatif=negatif, rencana=rencana),
@@ -803,7 +859,7 @@ async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TY
     )
     for key in ["sumpah_positif","sumpah_negatif","sumpah_rencana","sumpah_vow_num",
                 "sumpah_vow_en","sumpah_vow_id","sumpah_vow_nums_str","sumpah_vow_block",
-                "sumpah_vow_jam","sumpah_vow_label","sumpah_order"]:
+                "sumpah_vow_jam","sumpah_vow_label","sumpah_order","sumpah_was_pair"]:
         context.user_data.pop(key, None)
     return ConversationHandler.END
 

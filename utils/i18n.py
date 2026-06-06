@@ -411,6 +411,34 @@ STRINGS = {
             "_You will answer 3 questions. Where would you like to start?_"
         ),
     },
+    "sumpah_pilih_urutan_pair_intro": {
+        "id": (
+            "📿 *{label}*\n"
+            "*{jam} — Sumpah {nums_str}*\n\n"
+            "{vow_block}\n\n"
+            "─────────────────────\n"
+            "_Ada 2 sumpah — Anda akan merefleksikan masing-masing secara terpisah._\n"
+            "_Mulai dengan Sumpah {first_num}. Dari mana?_"
+        ),
+        "en": (
+            "📿 *{label}*\n"
+            "*{jam} — Vow {nums_str}*\n\n"
+            "{vow_block}\n\n"
+            "─────────────────────\n"
+            "_There are 2 vows — you will reflect on each one separately._\n"
+            "_Starting with Vow {first_num}. Where would you like to begin?_"
+        ),
+    },
+    "sumpah_pair_transisi": {
+        "id": (
+            "✅ *Sumpah {saved_num} tersimpan.*\n\n"
+            "Sekarang mari renungkan *Sumpah {next_num}:*"
+        ),
+        "en": (
+            "✅ *Vow {saved_num} saved.*\n\n"
+            "Now let's reflect on *Vow {next_num}:*"
+        ),
+    },
     "sumpah_order_pos_label": {"id": "✅ Mulai dari positif",  "en": "✅ Start with positives"},
     "sumpah_order_neg_label": {"id": "⚠️ Mulai dari negatif", "en": "⚠️ Start with negatives"},
 
