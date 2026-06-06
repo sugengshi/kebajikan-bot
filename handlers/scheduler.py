@@ -220,7 +220,9 @@ async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict, vo
         """Return True if this slot's vow or slot sesi is already filled."""
         sesi_key = f"slot_{times[si]}"
         vow_id = v[0] if isinstance(v, list) else v
-        return sesi_key in filled_sesi or vow_id in filled_vows
+        # Also check the vow-suffixed key format: "slot_19:30_264"
+        sesi_key_with_num = f"slot_{times[si]}_{vow_id}"
+        return sesi_key in filled_sesi or sesi_key_with_num in filled_sesi or vow_id in filled_vows
 
     # If this slot is already filled, find the next unfilled one
     if _slot_filled(vow, slot_index):

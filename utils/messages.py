@@ -135,9 +135,14 @@ def format_ringkasan_positif(catatan_list: list, tambahan_list: list, lang: str 
         ada_isi = True
         sesi = c.get("sesi", "")
         k_id = c.get("kebajikan_id", 0)
-        # Advanced/Super Advanced: sesi = "slot_HH:MM", k_id = vow number
+        # Advanced/Super Advanced: sesi = "slot_HH:MM" or "slot_HH:MM_NUM", k_id = vow number
         if sesi.startswith("slot_"):
             jam = sesi.replace("slot_", "")
+            # Strip vow number suffix: "19:30_264" → "19:30"
+            if "_" in jam:
+                parts = jam.rsplit("_", 1)
+                if parts[1].isdigit():
+                    jam = parts[0]
             from data.vows import ADVANCED_VOWS, SUPER_ADVANCED_VOWS
             vow_text = (ADVANCED_VOWS.get(k_id) or SUPER_ADVANCED_VOWS.get(k_id))
             if vow_text:
@@ -177,6 +182,11 @@ def _get_entry_header(c: dict, lang: str, hide_sesi_label: bool = False, vow_tim
     k_id = c.get("kebajikan_id", 0)
     if sesi.startswith("slot_"):
         jam = sesi.replace("slot_", "")
+        # Strip vow number suffix: "19:30_264" → "19:30"
+        if "_" in jam:
+            parts = jam.rsplit("_", 1)
+            if parts[1].isdigit():
+                jam = parts[0]
         from data.vows import ADVANCED_VOWS, SUPER_ADVANCED_VOWS
         vow_text = ADVANCED_VOWS.get(k_id) or SUPER_ADVANCED_VOWS.get(k_id)
         if vow_text:

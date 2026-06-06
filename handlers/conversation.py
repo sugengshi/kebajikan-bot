@@ -780,8 +780,7 @@ async def terima_sumpah_positif(update: Update, context: ContextTypes.DEFAULT_TY
         vow = context.user_data.get("sumpah_vow_num", 0)
         nums_str = context.user_data.get("sumpah_vow_nums_str", f"#{vow}")
         jam = context.user_data.get("sumpah_vow_jam", "")
-        was_pair = context.user_data.get("sumpah_was_pair", False)
-        sesi = f"slot_{jam}_{vow}" if (jam and was_pair) else (f"slot_{jam}" if jam else _sesi_sekarang())
+        sesi = f"slot_{jam}_{vow}" if jam else _sesi_sekarang()
         await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
         if await _maybe_transition_pair(update.message, context, lang, vow, nums_str):
             return PILIH_REFLEKSI
@@ -851,8 +850,7 @@ async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TY
     positif = context.user_data.get("sumpah_positif", "")
     negatif = context.user_data.get("sumpah_negatif", "")
     jam = context.user_data.get("sumpah_vow_jam", "")
-    was_pair = context.user_data.get("sumpah_was_pair", False)
-    sesi = f"slot_{jam}_{vow}" if (jam and was_pair) else (f"slot_{jam}" if jam else _sesi_sekarang())
+    sesi = f"slot_{jam}_{vow}" if jam else _sesi_sekarang()
     await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
     if await _maybe_transition_pair(update.message, context, lang, vow, nums_str):
         return PILIH_REFLEKSI
