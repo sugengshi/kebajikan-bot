@@ -5,7 +5,7 @@ from datetime import datetime
 import pytz
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from utils.database import get_all_users, get_user, get_catatan_hari_ini, get_tambahan_malam
+from utils.database import get_all_users, get_user, get_catatan_hari_ini, get_tambahan_malam, get_activity_last_7_days
 
 logger = logging.getLogger(__name__)
 WIB = pytz.timezone("Asia/Jakarta")
@@ -43,6 +43,8 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("No users found.")
         return
 
+    activity = await get_activity_last_7_days()  # {user_id: {days, entries}}
+
     # Define display order and headers for each level
     LEVEL_ORDER = ["super_advanced", "advanced", "mahir", "menengah", "pemula"]
     LEVEL_LABEL = {
@@ -60,7 +62,8 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lvl = u.get("level") or "pemula"
         grouped[lvl].append(u)
 
-    lines = [f"👥 *All Users* ({len(users)} total)\n"]
+    active_total = len(activity)
+    lines = [f"👥 *All Users* ({len(users)} total) — 🟢 {active_total} active (7d)\n"]
     buttons = []
 
     for lvl in LEVEL_ORDER:
@@ -68,7 +71,8 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not members:
             continue
         label = LEVEL_LABEL.get(lvl, lvl)
-        lines.append(f"\n*{label}* ({len(members)})")
+        active_in_level = sum(1 for u in members if u["user_id"] in activity)
+        lines.append(f"\n*{label}* ({len(members)} total, {active_in_level} active)")
         for u in members:
             uid       = u["user_id"]
             name      = u.get("username") or "—"
@@ -76,7 +80,9 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
             tz        = u.get("timezone") or "Asia/Jakarta"
             done      = "✅" if u.get("onboarding_selesai") else "⏳"
             safe_name = name.replace("`", "'")
-            lines.append(f"{done} `{uid}` — `{safe_name}` [{lang}] `{tz}`")
+            act       = activity.get(uid)
+            act_str   = f" 🟢 {act['days']}d" if act else " ⚪️"
+            lines.append(f"{done}{act_str} `{uid}` — `{safe_name}` [{lang}] `{tz}`")
             btn_label = f"📋 {safe_name}"
             buttons.append(InlineKeyboardButton(btn_label, callback_data=f"admin_entries_{uid}"))
 

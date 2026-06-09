@@ -288,6 +288,21 @@ async def get_catatan_hari_ini(user_id: int) -> list:
         return [dict(r) for r in rows]
 
 
+async def get_activity_last_7_days() -> dict:
+    """Return {user_id: {'days': N, 'entries': M}} for anyone active in the past 7 days."""
+    async with _pool_conn() as conn:
+        rows = await conn.fetch("""
+            SELECT user_id,
+                   COUNT(DISTINCT tanggal) AS days_active,
+                   COUNT(*)               AS total_entries
+            FROM catatan_harian
+            WHERE tanggal >= CURRENT_DATE - INTERVAL '6 days'
+            GROUP BY user_id
+        """)
+        return {r["user_id"]: {"days": r["days_active"], "entries": r["total_entries"]}
+                for r in rows}
+
+
 # ─── TAMBAHAN MALAM ──────────────────────────────────────────────────────────
 
 async def save_tambahan_malam(user_id: int, catatan: str):
