@@ -34,7 +34,7 @@ def _esc(text: str) -> str:
 # ─── /adminusers ─────────────────────────────────────────────────────────────
 
 async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """List all registered users with a 📋 button to view each user's entries."""
+    """List all registered users grouped by level, with a 📋 button per user."""
     if not _is_admin(update.effective_user.id):
         return
 
@@ -43,21 +43,42 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("No users found.")
         return
 
+    # Define display order and headers for each level
+    LEVEL_ORDER = ["super_advanced", "advanced", "mahir", "menengah", "pemula"]
+    LEVEL_LABEL = {
+        "super_advanced": "💎 Super Advanced",
+        "advanced":       "🪷 Advanced",
+        "mahir":          "🌳 Mahir",
+        "menengah":       "🌿 Menengah",
+        "pemula":         "🌱 Pemula",
+    }
+
+    # Group users by level
+    from collections import defaultdict
+    grouped = defaultdict(list)
+    for u in users:
+        lvl = u.get("level") or "pemula"
+        grouped[lvl].append(u)
+
     lines = [f"👥 *All Users* ({len(users)} total)\n"]
     buttons = []
-    for u in users:
-        uid       = u["user_id"]
-        name      = u.get("username") or "—"
-        level     = u.get("level") or "pemula"
-        emoji     = LEVEL_EMOJI.get(level, "•")
-        lang      = u.get("bahasa") or "id"
-        tz        = u.get("timezone") or "Asia/Jakarta"
-        done      = "✅" if u.get("onboarding_selesai") else "⏳"
-        safe_name = name.replace("`", "'")
-        lines.append(f"{done} `{uid}` — `{safe_name}` {emoji} `{level}` [{lang}] `{tz}`")
-        # One button per user — tap to see today's entries
-        btn_label = f"📋 {safe_name} {emoji}"
-        buttons.append(InlineKeyboardButton(btn_label, callback_data=f"admin_entries_{uid}"))
+
+    for lvl in LEVEL_ORDER:
+        members = grouped.get(lvl, [])
+        if not members:
+            continue
+        label = LEVEL_LABEL.get(lvl, lvl)
+        lines.append(f"\n*{label}* ({len(members)})")
+        for u in members:
+            uid       = u["user_id"]
+            name      = u.get("username") or "—"
+            lang      = u.get("bahasa") or "id"
+            tz        = u.get("timezone") or "Asia/Jakarta"
+            done      = "✅" if u.get("onboarding_selesai") else "⏳"
+            safe_name = name.replace("`", "'")
+            lines.append(f"{done} `{uid}` — `{safe_name}` [{lang}] `{tz}`")
+            btn_label = f"📋 {safe_name}"
+            buttons.append(InlineKeyboardButton(btn_label, callback_data=f"admin_entries_{uid}"))
 
     # Pair buttons into rows of 2
     kb_rows = [buttons[i:i+2] for i in range(0, len(buttons), 2)]
