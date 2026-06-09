@@ -62,17 +62,19 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lvl = u.get("level") or "pemula"
         grouped[lvl].append(u)
 
-    active_total = len(activity)
-    lines = [f"👥 *All Users* ({len(users)} total) — 🟢 {active_total} active (7d)\n"]
+    active_total   = len(activity)
+    inactive_total = len(users) - active_total
+    lines = [f"👥 *All Users* ({len(users)} total) — 🟢 {active_total} active · ⚪️ {inactive_total} inactive (7d)\n"]
     buttons = []
 
+    # ── Active users grouped by level ──────────────────────────────────────────
+    lines.append("*🟢 Active (last 7 days)*")
     for lvl in LEVEL_ORDER:
-        members = grouped.get(lvl, [])
+        members = [u for u in grouped.get(lvl, []) if u["user_id"] in activity]
         if not members:
             continue
         label = LEVEL_LABEL.get(lvl, lvl)
-        active_in_level = sum(1 for u in members if u["user_id"] in activity)
-        lines.append(f"\n*{label}* ({len(members)} total, {active_in_level} active)")
+        lines.append(f"\n*{label}* ({len(members)})")
         for u in members:
             uid       = u["user_id"]
             name      = u.get("username") or "—"
@@ -80,11 +82,31 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
             tz        = u.get("timezone") or "Asia/Jakarta"
             done      = "✅" if u.get("onboarding_selesai") else "⏳"
             safe_name = name.replace("`", "'")
-            act       = activity.get(uid)
-            act_str   = f" 🟢 {act['days']}d" if act else " ⚪️"
-            lines.append(f"{done}{act_str} `{uid}` — `{safe_name}` [{lang}] `{tz}`")
-            btn_label = f"📋 {safe_name}"
-            buttons.append(InlineKeyboardButton(btn_label, callback_data=f"admin_entries_{uid}"))
+            act       = activity[uid]
+            lines.append(f"{done} `{uid}` — `{safe_name}` [{lang}] `{tz}` _{act['days']}/7d_")
+            buttons.append(InlineKeyboardButton(f"📋 {safe_name}", callback_data=f"admin_entries_{uid}"))
+
+    # ── Inactive users grouped by level ────────────────────────────────────────
+    lines.append(f"\n\n*⚪️ Inactive (7d)*")
+    any_inactive = False
+    for lvl in LEVEL_ORDER:
+        members = [u for u in grouped.get(lvl, []) if u["user_id"] not in activity]
+        if not members:
+            continue
+        any_inactive = True
+        label = LEVEL_LABEL.get(lvl, lvl)
+        lines.append(f"\n*{label}* ({len(members)})")
+        for u in members:
+            uid       = u["user_id"]
+            name      = u.get("username") or "—"
+            lang      = u.get("bahasa") or "id"
+            tz        = u.get("timezone") or "Asia/Jakarta"
+            done      = "✅" if u.get("onboarding_selesai") else "⏳"
+            safe_name = name.replace("`", "'")
+            lines.append(f"{done} `{uid}` — `{safe_name}` [{lang}] `{tz}`")
+            buttons.append(InlineKeyboardButton(f"📋 {safe_name}", callback_data=f"admin_entries_{uid}"))
+    if not any_inactive:
+        lines.append("_Everyone has been active this week!_ 🎉")
 
     # Pair buttons into rows of 2
     kb_rows = [buttons[i:i+2] for i in range(0, len(buttons), 2)]
