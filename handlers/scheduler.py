@@ -238,8 +238,10 @@ async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict, vo
                 break
 
         if next_vow is None:
-            # All remaining vows are filled — ask if they want to rewrite
-            await _send_all_done(bot, user_id, lang, vows_today, times, vow_dict, label)
+            # No unfilled slots ahead — check ALL slots before declaring done
+            # (earlier slots like 14:30 / 17:00 may still be unfilled)
+            if all(_slot_filled(vows_today[si], si) for si in range(len(vows_today))):
+                await _send_all_done(bot, user_id, lang, vows_today, times, vow_dict, label)
             return
 
         # Send the next unfilled vow instead
