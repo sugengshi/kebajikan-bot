@@ -632,6 +632,18 @@ STRINGS = {
         "id": "Gunakan /{cmd_ganti} untuk memilih kebajikan fokus.",
         "en": "Use /{cmd_ganti} to choose a virtue focus.",
     },
+    "sumpah_pengingat_kosong": {
+        "id": (
+            "⏰ *Pengingat sebelum ringkasan malam*\n\n"
+            "Sumpah berikut belum direfleksikan hari ini:\n{daftar}\n\n"
+            "Tap salah satu untuk mengisi sekarang."
+        ),
+        "en": (
+            "⏰ *Reminder before tonight's review*\n\n"
+            "The following vows haven't been reflected on yet today:\n{daftar}\n\n"
+            "Tap one to fill it in now."
+        ),
+    },
     "sumpah_semua_selesai": {
         "id": (
             "🎉 *Semua sumpah hari ini sudah direfleksikan!*\n\n"
