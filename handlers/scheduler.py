@@ -152,6 +152,8 @@ async def _dispatch(bot: Bot, user_id: int, u: dict, jam: str):
             # Also send daily bookends for advanced users
             if jam == u.get("jam_fokus", "06:00"):
                 await kirim_jadwal_sumpah_pagi(bot, user_id, level)
+            elif jam == _jam_minus_30(u.get("jam_ringkasan", "21:00")):
+                await kirim_pengingat_sumpah_kosong(bot, user_id, level, u, vow_times)
             elif jam == u.get("jam_ringkasan", "21:00"):
                 await kirim_ringkasan(bot, user_id)
             elif jam == u.get("jam_cofmed", "21:30"):
@@ -274,6 +276,69 @@ async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict, vo
     ]])
 
     await bot.send_message(chat_id=user_id, text=text, parse_mode="Markdown", reply_markup=kb)
+
+
+def _jam_minus_30(jam: str) -> str:
+    """Return the time 30 minutes before jam (HH:MM → HH:MM)."""
+    try:
+        h, m = int(jam[:2]), int(jam[3:5])
+        total = h * 60 + m - 30
+        if total < 0:
+            total += 24 * 60
+        return f"{total // 60:02d}:{total % 60:02d}"
+    except Exception:
+        return "20:30"
+
+
+async def kirim_pengingat_sumpah_kosong(bot: Bot, user_id: int, level: str,
+                                        db_user: dict, vow_times: list):
+    """30 min before the summary: remind user of any unfilled vow slots."""
+    from data.vows import (get_adv_vows_for_day, get_sa_vows_for_day,
+                           ADVANCED_VOWS, SUPER_ADVANCED_VOWS, ADV_TIMES, SA_TIMES)
+
+    lang       = db_user.get("bahasa", "id") or "id"
+    day_number = _day_number(db_user)
+    times      = vow_times or (ADV_TIMES if level == "advanced" else SA_TIMES)
+    vows_today = (get_adv_vows_for_day(day_number) if level == "advanced"
+                  else get_sa_vows_for_day(day_number))
+    vow_dict   = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
+
+    catatan_today = await get_catatan_hari_ini(user_id)
+    filled_vows   = {c["kebajikan_id"] for c in catatan_today}
+    filled_sesi   = {c["sesi"] for c in catatan_today}
+
+    def _slot_filled(v, si):
+        sesi_key         = f"slot_{times[si]}"
+        vow_id           = v[0] if isinstance(v, list) else v
+        sesi_key_with_num = f"slot_{times[si]}_{vow_id}"
+        return sesi_key in filled_sesi or sesi_key_with_num in filled_sesi or vow_id in filled_vows
+
+    unfilled = [(i, t, v) for i, (t, v) in enumerate(zip(times, vows_today))
+                if not _slot_filled(v, i)]
+
+    if not unfilled:
+        return  # All done — no reminder needed
+
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    rows = []
+    daftar_lines = []
+    for si, t, v in unfilled:
+        vow_id = v[0] if isinstance(v, list) else v
+        en_t, id_t = vow_dict.get(vow_id, ("?", "?"))
+        short = (id_t if lang == "id" else en_t)[:45]
+        daftar_lines.append(f"○ *{t}* — #{vow_id} _{short}..._")
+        rows.append([InlineKeyboardButton(
+            f"{t} — #{vow_id} {short[:30]}...",
+            callback_data=f"reflect_vow_{si}_{t.replace(':','')}"
+        )])
+
+    daftar = "\n".join(daftar_lines)
+    await bot.send_message(
+        chat_id=user_id,
+        text=T("sumpah_pengingat_kosong", lang, daftar=daftar),
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(rows),
+    )
 
 
 async def _send_all_done(bot, user_id: int, lang: str, vows_today: list, times: list,
