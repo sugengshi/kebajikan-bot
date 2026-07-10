@@ -67,12 +67,12 @@ async def post_init(application):
     await application.bot.set_my_commands(id_commands)
     await application.bot.set_my_commands(en_commands, language_code="en")
 
-    # Admin-only commands — visible only in the admin's chat menu
+    # Admin gets normal commands + admin commands in their menu
     admin_id_str = os.environ.get("ADMIN_USER_ID", "")
     if admin_id_str:
         try:
             admin_id = int(admin_id_str)
-            admin_commands = [
+            admin_commands = en_commands + [
                 BotCommand("adminusers",   "👥 All users by level + activity"),
                 BotCommand("adminuser",    "👤 Profile for one user"),
                 BotCommand("adminentries", "📋 Today's entries for one user"),
