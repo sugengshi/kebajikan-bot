@@ -63,9 +63,28 @@ async def post_init(application):
         BotCommand("settime",     "Set notification times"),
         BotCommand("setvowtime",  "Set vow notification times (Advanced)"),
     ]
-    from telegram import BotCommandScopeDefault
+    from telegram import BotCommandScopeDefault, BotCommandScopeChat
     await application.bot.set_my_commands(id_commands)
     await application.bot.set_my_commands(en_commands, language_code="en")
+
+    # Admin-only commands — visible only in the admin's chat menu
+    admin_id_str = os.environ.get("ADMIN_USER_ID", "")
+    if admin_id_str:
+        try:
+            admin_id = int(admin_id_str)
+            admin_commands = [
+                BotCommand("adminusers",   "👥 All users by level + activity"),
+                BotCommand("adminuser",    "👤 Profile for one user"),
+                BotCommand("adminentries", "📋 Today's entries for one user"),
+            ]
+            await application.bot.set_my_commands(
+                admin_commands,
+                scope=BotCommandScopeChat(chat_id=admin_id),
+            )
+            logger.info(f"Admin commands registered for user {admin_id}.")
+        except Exception as e:
+            logger.warning(f"Could not register admin commands: {e}")
+
     logger.info("Bot commands registered.")
     logger.info("Bot initialized successfully.")
 
