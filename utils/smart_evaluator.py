@@ -12,51 +12,79 @@ INDIKATOR_SMART = {
     "S": {
         "label": "Spesifik",
         "kata": [
+            # Indonesian
             "saya", "aku", "kita", "akan", "ingin", "mau", "berkomitmen", "hendak", "berniat",
-            "dengan cara", "melalui", "kepada", "bersama", "kepada",
+            "dengan cara", "melalui", "kepada", "bersama",
             "di rumah", "di kantor", "di keluarga", "di tempat kerja",
             "anak", "istri", "suami", "orang tua", "rekan", "teman",
+            # English
+            "i will", "i want", "i am", "i plan", "i commit", "i intend",
+            "with", "through", "to my", "for my", "at home", "at work",
+            "my child", "my wife", "my husband", "my partner", "my family",
+            "my colleague", "my friend",
         ],
         "petunjuk": "Coba sebutkan *siapa* yang terlibat atau *apa* yang ingin Anda ubah.",
     },
     "M": {
         "label": "Terukur",
         "kata": [
+            # Indonesian
             "kali", "sehari", "seminggu", "menit", "jam", "persen", "%",
             "orang", "hari", "minggu", "bulan", "lebih", "setiap",
             "minimal", "setidaknya", "tidak", "selalu", "rutin",
             "lebih sering", "lebih baik", "lebih sabar", "lebih ramah",
+            # English
+            "times", "per day", "per week", "minutes", "hours", "percent",
+            "daily", "weekly", "monthly", "more", "every", "at least",
+            "always", "regularly", "more often", "better", "more patient",
         ],
         "petunjuk": "Tambahkan ukuran sederhana — misalnya frekuensi atau perubahan yang bisa dirasakan.",
     },
     "A": {
         "label": "Bisa Dicapai",
         "kata": [
+            # Indonesian
             "mulai", "langkah", "satu", "kecil", "sedikit", "perlahan",
             "bertahap", "mencoba", "berlatih", "setiap hari", "rutin",
             "kebiasaan", "bisa", "mampu", "berusaha", "ingin",
             "komitmen", "tekad", "niat", "usaha", "coba",
+            # English
+            "start", "step", "one", "small", "little", "gradually",
+            "try", "practice", "each day", "routine", "habit", "able",
+            "capable", "effort", "commit", "intend", "attempt",
         ],
         "petunjuk": "Pastikan tujuan terasa bisa dilakukan — tidak perlu sempurna, cukup nyata.",
     },
     "R": {
         "label": "Relevan",
         "kata": [
+            # Indonesian
             "supaya", "agar", "karena", "demi", "untuk", "sehingga",
             "membantu", "bermanfaat", "berdampak", "penting", "berarti",
             "nilai", "prinsip", "perubahan", "lebih baik",
             "keluarga", "orang lain", "diri", "hidup", "ingin",
+            # English
+            "so that", "because", "in order to", "to help", "for the sake",
+            "important", "meaningful", "impact", "value", "principle",
+            "change", "improve", "family", "others", "myself", "life",
         ],
         "petunjuk": "Tuliskan *mengapa* ini penting bagi Anda — satu kalimat sudah cukup.",
     },
     "T": {
         "label": "Batas Waktu",
         "kata": [
+            # Indonesian
             "hari", "minggu", "bulan", "tahun", "30", "60", "90", "7",
             "dalam", "selama", "sampai", "hingga", "selesai", "ke depan",
             "januari", "februari", "maret", "april", "mei", "juni",
             "juli", "agustus", "september", "oktober", "november", "desember",
             "besok", "pekan", "semester", "triwulan",
+            # English
+            "days", "weeks", "months", "years", "within", "during", "until",
+            "by", "before", "deadline", "tomorrow", "next week", "next month",
+            "january", "february", "march", "april", "may", "june",
+            "july", "august", "september", "october", "november", "december",
+            "quarter", "semester",
         ],
         "petunjuk": "Tambahkan batas waktu — misalnya '30 hari' atau 'bulan ini'.",
     },
@@ -110,24 +138,85 @@ def evaluasi_smart(teks: str) -> dict:
 KEBAJIKAN_AKTIF = {k: v for k, v in KEBAJIKAN.items() if k != 10}
 
 KATA_KUNCI_KEBAJIKAN = {
-    1: ["sehat", "kesehatan", "hidup", "sakit", "tubuh", "olahraga", "tidur",
-        "makan", "minum", "jaga diri", "keselamatan", "cedera", "istirahat"],
-    2: ["berbagi", "memberi", "murah hati", "dermawan", "sumbangan", "membantu",
-        "uang", "harta", "rejeki", "keuangan", "investasi", "tabungan", "menabung"],
-    3: ["keluarga", "pasangan", "suami", "istri", "hubungan", "pernikahan",
-        "setia", "kepercayaan", "komitmen", "anak", "orang tua", "rumah tangga"],
-    4: ["jujur", "kejujuran", "janji", "integritas", "transparansi",
-        "terbuka", "percaya", "menepati", "amanah"],
-    5: ["konflik", "bertengkar", "damai", "harmonis", "orang lain",
-        "bersama", "tim", "komunitas", "kelompok", "kebersamaan", "rukun"],
-    6: ["bicara", "kata-kata", "komunikasi", "berbicara", "perkataan",
-        "ramah", "sopan", "lembut", "sabar", "nada", "amarah", "marah", "emosi"],
-    7: ["fokus", "produktif", "efisien", "berguna", "bermanfaat",
-        "konsentrasi", "rencana", "kerja", "tugas", "pekerjaan", "karir"],
-    8: ["syukur", "bersyukur", "bahagia", "senang", "gembira", "positif",
-        "iri", "cemburu", "kepuasan", "apresiasi", "terima kasih"],
-    9: ["empati", "peduli", "simpati", "membantu", "perhatian",
-        "mendukung", "mendengarkan", "kasih", "menolong", "sosial"],
+    1: [
+        # Indonesian
+        "sehat", "kesehatan", "hidup", "sakit", "tubuh", "olahraga", "tidur",
+        "makan", "minum", "jaga diri", "keselamatan", "cedera", "istirahat",
+        # English
+        "health", "healthy", "body", "exercise", "sleep", "eat", "eating",
+        "drink", "injury", "rest", "safety", "fitness", "wellbeing", "wellness",
+    ],
+    2: [
+        # Indonesian
+        "berbagi", "memberi", "murah hati", "dermawan", "sumbangan", "membantu",
+        "uang", "harta", "rejeki", "keuangan", "investasi", "tabungan", "menabung",
+        # English
+        "give", "giving", "generous", "generosity", "donate", "donation", "share",
+        "money", "wealth", "finance", "financial", "save", "saving", "budget",
+        "spend", "charity",
+    ],
+    3: [
+        # Indonesian
+        "keluarga", "pasangan", "suami", "istri", "hubungan", "pernikahan",
+        "setia", "kepercayaan", "komitmen", "anak", "orang tua", "rumah tangga",
+        # English
+        "family", "spouse", "husband", "wife", "relationship", "marriage",
+        "faithful", "fidelity", "commitment", "child", "children", "parent",
+        "parents", "home", "household", "partner",
+    ],
+    4: [
+        # Indonesian
+        "jujur", "kejujuran", "janji", "integritas", "transparansi",
+        "terbuka", "percaya", "menepati", "amanah",
+        # English
+        "honest", "honesty", "promise", "integrity", "transparent", "transparency",
+        "truthful", "truth", "trust", "trustworthy", "open", "sincere", "sincerity",
+    ],
+    5: [
+        # Indonesian
+        "konflik", "bertengkar", "damai", "harmonis", "orang lain",
+        "bersama", "tim", "komunitas", "kelompok", "kebersamaan", "rukun",
+        # English
+        "conflict", "argue", "argument", "peace", "harmony", "harmonious",
+        "team", "community", "group", "together", "cooperation", "collaborate",
+        "cooperation", "unity",
+    ],
+    6: [
+        # Indonesian
+        "bicara", "kata-kata", "komunikasi", "berbicara", "perkataan",
+        "ramah", "sopan", "lembut", "sabar", "nada", "amarah", "marah", "emosi",
+        # English
+        "speak", "speech", "talk", "communication", "communicate", "words",
+        "kind", "kindness", "gentle", "patient", "patience", "tone", "anger",
+        "angry", "emotion", "temper", "polite",
+    ],
+    7: [
+        # Indonesian
+        "fokus", "produktif", "efisien", "berguna", "bermanfaat",
+        "konsentrasi", "rencana", "kerja", "tugas", "pekerjaan", "karir",
+        # English
+        "focus", "productive", "productivity", "efficient", "efficiency",
+        "useful", "concentrate", "concentration", "plan", "work", "task",
+        "job", "career", "goal", "achieve", "achievement",
+    ],
+    8: [
+        # Indonesian
+        "syukur", "bersyukur", "bahagia", "senang", "gembira", "positif",
+        "iri", "cemburu", "kepuasan", "apresiasi", "terima kasih",
+        # English
+        "gratitude", "grateful", "thankful", "happy", "happiness", "joy",
+        "joyful", "positive", "jealous", "jealousy", "envy", "satisfied",
+        "satisfaction", "appreciate", "appreciation", "thank", "blessing",
+    ],
+    9: [
+        # Indonesian
+        "empati", "peduli", "simpati", "membantu", "perhatian",
+        "mendukung", "mendengarkan", "kasih", "menolong", "sosial",
+        # English
+        "empathy", "empathize", "care", "compassion", "sympathy", "help",
+        "helping", "attention", "support", "listen", "listening", "love",
+        "loving", "social", "others", "people",
+    ],
 }
 
 # Pasangan pendukung — tidak menggunakan kebajikan 10

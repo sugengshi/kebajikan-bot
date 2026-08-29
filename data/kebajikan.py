@@ -206,8 +206,23 @@ KEBAJIKAN = {
 LEVEL_CONFIG = {
     "pemula": {"jumlah": 1, "label": "Pemula 🌱", "deskripsi": "1 kebajikan fokus per hari"},
     "menengah": {"jumlah": 3, "label": "Praktisi Menengah 🌿", "deskripsi": "3 kebajikan fokus per hari"},
-    "mahir": {"jumlah": 10, "label": "Praktisi Mahir 🌳", "deskripsi": "10 kebajikan dengan sistem rotasi"},
+    "mahir": {"jumlah": 6, "label": "Praktisi Mahir 🌳", "deskripsi": "6 kebajikan per hari, rotasi otomatis"},
 }
+
+
+def get_mahir_virtues_for_day(day_number: int) -> list:
+    """Returns 6 kebajikan IDs for the given day in the mahir rotation.
+
+    Day 1: [1,2,3,4,5,6]
+    Day 2: [7,8,9,10,1,2]
+    Day 3: [3,4,5,6,7,8]
+    Day 4: [9,10,1,2,3,4]
+    Day 5: [5,6,7,8,9,10]
+    Day 6+: repeats from Day 1
+    """
+    start = ((day_number - 1) * 6) % 10
+    return [(start + i) % 10 + 1 for i in range(6)]
+
 
 def get_kebajikan_by_id(kebajikan_id: int) -> dict:
     return KEBAJIKAN.get(kebajikan_id, {})

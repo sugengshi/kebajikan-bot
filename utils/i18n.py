@@ -632,6 +632,16 @@ STRINGS = {
         "id": "Gunakan /{cmd_ganti} untuk memilih kebajikan fokus.",
         "en": "Use /{cmd_ganti} to choose a virtue focus.",
     },
+    "mahir_hari_ini": {
+        "id": (
+            "🌳 *Hari ke-{day} Praktik Mahir Anda*\n\n"
+            "Kebajikan rotasi hari ini:"
+        ),
+        "en": (
+            "🌳 *Day {day} of your Mahir Practice*\n\n"
+            "Today's rotating virtues:"
+        ),
+    },
     "sumpah_pengingat_kosong": {
         "id": (
             "⏰ *Pengingat sebelum ringkasan malam*\n\n"

@@ -17,7 +17,7 @@ from utils.messages import (
     format_pagi_ganti_tanya
 )
 from utils.i18n import T
-from data.kebajikan import KEBAJIKAN, LEVEL_CONFIG
+from data.kebajikan import KEBAJIKAN, LEVEL_CONFIG, get_mahir_virtues_for_day
 from data.vows import (
     ADVANCED_VOWS, SUPER_ADVANCED_VOWS,
     ADV_TIMES, SA_TIMES,
@@ -403,14 +403,35 @@ async def kirim_jadwal_sumpah_pagi(bot: Bot, user_id: int, level: str):
 
 
 async def _kirim_06(bot: Bot, user_id: int):
-    """06:00 — tanya ganti fokus atau lanjutkan."""
+    """06:00 — tanya ganti fokus atau lanjutkan (standar); auto-rotate untuk mahir."""
     db_user = await get_user(user_id)
     if not db_user:
         return
+    lang = db_user.get("bahasa", "id") or "id"
+    level = db_user.get("level", "pemula")
+
+    # ── Mahir: auto-assign today's rotating 6 virtues ──────────────────────────
+    if level == "mahir":
+        join_date = db_user.get("join_date")
+        if join_date:
+            today_date = datetime.now(WIB).date()
+            jd = join_date.date() if hasattr(join_date, "date") else join_date
+            day_num = (today_date - jd).days + 1
+        else:
+            day_num = 1
+        new_fokus = get_mahir_virtues_for_day(day_num)
+        await update_user(user_id, kebajikan_fokus=new_fokus)
+        lines = [T("mahir_hari_ini", lang, day=day_num)]
+        for k_id in new_fokus:
+            k = KEBAJIKAN.get(k_id, {})
+            lines.append(f"{k.get('emoji', '')} *{k.get('nama', '')}*")
+        await bot.send_message(chat_id=user_id, text="\n".join(lines), parse_mode="Markdown")
+        return
+
+    # ── Standard levels: ask change or continue ─────────────────────────────────
     fokus = db_user.get("kebajikan_fokus", [])
     if not fokus:
         return
-    lang = db_user.get("bahasa", "id") or "id"
 
     await bot.send_message(
         chat_id=user_id,

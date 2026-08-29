@@ -24,7 +24,7 @@ from utils.messages import (
 )
 from utils.i18n import T, COMMANDS, TIMEZONE_MAP, cmd
 from utils.smart_evaluator import evaluasi_smart, rekomendasikan_kebajikan
-from data.kebajikan import KEBAJIKAN, LEVEL_CONFIG
+from data.kebajikan import KEBAJIKAN, LEVEL_CONFIG, get_mahir_virtues_for_day
 
 logger = logging.getLogger(__name__)
 
@@ -283,6 +283,12 @@ async def pilih_level_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return UPGRADE_PASSWORD
 
+    # Mahir: skip SMART goal — auto-assign Day 1 rotating virtues
+    if level == "mahir":
+        context.user_data["kebajikan_dipilih"] = get_mahir_virtues_for_day(1)
+        context.user_data["goal"] = ""
+        return await _simpan_dan_selesai(query, context, lang)
+
     await query.message.reply_text(format_tujuan_smart(lang), parse_mode="Markdown")
     return ONBOARDING_GOAL
 
@@ -393,8 +399,6 @@ async def _simpan_dan_selesai(query, context, lang: str):
     level = context.user_data.get("level", "pemula")
     dipilih = context.user_data.get("kebajikan_dipilih", [])
     goal = context.user_data.get("goal", "")
-    if level == "mahir":
-        dipilih = list(range(1, 11))
     tz = context.user_data.get("timezone", "Asia/Jakarta")
     await update_user(user_id, level=level, kebajikan_fokus=dipilih,
                       tujuan_smart=goal, onboarding_selesai=1, timezone=tz)
@@ -1313,7 +1317,15 @@ def _format_vow_schedule(target: str, day_number: int, lang: str) -> str:
 
 async def _apply_level_upgrade_direct(user_id: int, context, target: str, join_date):
     update_kwargs = {"level": target}
-    if target in ("advanced", "super_advanced"):
+    if target == "mahir":
+        jd = join_date
+        if jd:
+            jd = jd.date() if hasattr(jd, "date") else jd
+            day_num = (date.today() - jd).days + 1
+        else:
+            day_num = 1
+        update_kwargs["kebajikan_fokus"] = get_mahir_virtues_for_day(day_num)
+    elif target in ("advanced", "super_advanced"):
         update_kwargs["join_date"] = join_date if join_date else date.today()
         update_kwargs["kebajikan_fokus"] = list(range(1, 11))
     db_user = await get_user(user_id)
@@ -1571,7 +1583,17 @@ async def _apply_level_upgrade(source, context, target, join_date=None):
     user_id = source.from_user.id
     lang = await _lang(user_id, context)
     update_kwargs = {"level": target}
-    if target in ("advanced", "super_advanced"):
+    if target == "mahir":
+        db_user_pre = await get_user(user_id)
+        jd = (db_user_pre or {}).get("join_date")
+        if jd:
+            from datetime import datetime as _dt
+            jd = jd.date() if hasattr(jd, "date") else jd
+            day_num = (date.today() - jd).days + 1
+        else:
+            day_num = 1
+        update_kwargs["kebajikan_fokus"] = get_mahir_virtues_for_day(day_num)
+    elif target in ("advanced", "super_advanced"):
         update_kwargs["join_date"] = join_date if join_date else date.today()
         update_kwargs["kebajikan_fokus"] = list(range(1, 11))
     db_user = await get_user(user_id)
