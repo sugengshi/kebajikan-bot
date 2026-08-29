@@ -632,6 +632,22 @@ STRINGS = {
         "id": "Gunakan /{cmd_ganti} untuk memilih kebajikan fokus.",
         "en": "Use /{cmd_ganti} to choose a virtue focus.",
     },
+    "mahir_sambutan_jam": {
+        "id": (
+            "🌳 *Level Mahir dipilih!*\n\n"
+            "Kebajikan rotasi hari pertama Anda:\n"
+            "1 · 2 · 3 · 4 · 5 · 6\n\n"
+            "Sekarang atur *6 waktu refleksi harian* Anda.\n"
+            "_Bisa diubah kapan saja dengan /setjamsumpah._"
+        ),
+        "en": (
+            "🌳 *Mahir level selected!*\n\n"
+            "Your first-day rotating virtues:\n"
+            "1 · 2 · 3 · 4 · 5 · 6\n\n"
+            "Now set your *6 daily reflection times*.\n"
+            "_You can change these anytime with /setvowtime._"
+        ),
+    },
     "mahir_hari_ini": {
         "id": (
             "🌳 *Hari ke-{day} Praktik Mahir Anda*\n\n"

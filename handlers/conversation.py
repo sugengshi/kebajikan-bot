@@ -283,11 +283,18 @@ async def pilih_level_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return UPGRADE_PASSWORD
 
-    # Mahir: skip SMART goal — auto-assign Day 1 rotating virtues
+    # Mahir: skip SMART goal — auto-assign Day 1 virtues, then set 6 reflection times
     if level == "mahir":
-        context.user_data["kebajikan_dipilih"] = get_mahir_virtues_for_day(1)
+        dipilih = get_mahir_virtues_for_day(1)
+        context.user_data["kebajikan_dipilih"] = dipilih
         context.user_data["goal"] = ""
-        return await _simpan_dan_selesai(query, context, lang)
+        context.user_data["mahir_onboarding"] = True
+        tz = context.user_data.get("timezone", "Asia/Jakarta")
+        await update_user(query.from_user.id, level="mahir", kebajikan_fokus=dipilih,
+                          tujuan_smart="", onboarding_selesai=1, timezone=tz)
+        await query.edit_message_text(T("mahir_sambutan_jam", lang), parse_mode="Markdown")
+        context.user_data["vow_times_new"] = list(VOW_JAM_DEFAULTS)
+        return await _vow_jam_next_slot(query.message, context, lang, slot=0)
 
     await query.message.reply_text(format_tujuan_smart(lang), parse_mode="Markdown")
     return ONBOARDING_GOAL
@@ -1451,6 +1458,14 @@ async def _vow_jam_advance(message, context, lang: str, slot: int):
     await message.reply_text(
         T("vow_jam_selesai", lang, ringkasan=ringkasan), parse_mode="Markdown"
     )
+    # If coming from mahir onboarding, send the onboarding completion message
+    if context.user_data.pop("mahir_onboarding", False):
+        dipilih = context.user_data.get("kebajikan_dipilih", list(range(1, 7)))
+        tz = context.user_data.get("timezone", "Asia/Jakarta")
+        nama = getattr(message.chat, "first_name", "") or ""
+        await message.reply_text(
+            format_onboarding_selesai(nama, dipilih, lang, tz), parse_mode="Markdown"
+        )
     context.user_data.pop("vow_times_new", None)
     return ConversationHandler.END
 
