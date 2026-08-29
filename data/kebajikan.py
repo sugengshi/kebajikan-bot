@@ -204,9 +204,11 @@ KEBAJIKAN = {
 
 # Mapping level ke jumlah kebajikan
 LEVEL_CONFIG = {
-    "pemula": {"jumlah": 1, "label": "Pemula 🌱", "deskripsi": "1 kebajikan fokus per hari"},
-    "menengah": {"jumlah": 3, "label": "Praktisi Menengah 🌿", "deskripsi": "3 kebajikan fokus per hari"},
-    "mahir": {"jumlah": 6, "label": "Praktisi Mahir 🌳", "deskripsi": "6 kebajikan per hari, rotasi otomatis"},
+    "pemula":         {"jumlah": 1,  "label": "Pemula 🌱",       "deskripsi": "1 kebajikan fokus per hari"},
+    "menengah":       {"jumlah": 3,  "label": "Menengah 🌿",     "deskripsi": "3 kebajikan fokus per hari"},
+    "mahir":          {"jumlah": 6,  "label": "Mahir 🌳",        "deskripsi": "6 kebajikan per hari, rotasi otomatis"},
+    "advanced":       {"jumlah": 10, "label": "Bodhisattva 🪷",  "deskripsi": "Sumpah Bodhisattva, rotasi 147 hari"},
+    "super_advanced": {"jumlah": 10, "label": "Diamond 💎",      "deskripsi": "Sumpah Diamond, rotasi 44 hari"},
 }
 
 

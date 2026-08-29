@@ -18,6 +18,14 @@ LEVEL_EMOJI = {
     "super_advanced": "💎",
 }
 
+LEVEL_DISPLAY = {
+    "pemula":         "🌱 Pemula",
+    "menengah":       "🌿 Menengah",
+    "mahir":          "🌳 Mahir",
+    "advanced":       "🪷 Bodhisattva",
+    "super_advanced": "💎 Diamond",
+}
+
 
 def _is_admin(user_id: int) -> bool:
     admin_id = os.environ.get("ADMIN_USER_ID", "")
@@ -48,8 +56,8 @@ async def cmd_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Define display order and headers for each level
     LEVEL_ORDER = ["super_advanced", "advanced", "mahir", "menengah", "pemula"]
     LEVEL_LABEL = {
-        "super_advanced": "💎 Super Advanced",
-        "advanced":       "🪷 Advanced",
+        "super_advanced": "💎 Diamond",
+        "advanced":       "🪷 Bodhisattva",
         "mahir":          "🌳 Mahir",
         "menengah":       "🌿 Menengah",
         "pemula":         "🌱 Pemula",

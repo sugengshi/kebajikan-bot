@@ -84,8 +84,8 @@ STRINGS = {
     "level_pemula_label":   {"id": "🌱 Pemula",                         "en": "🌱 Beginner"},
     "level_menengah_label": {"id": "🌿 Praktisi Menengah",              "en": "🌿 Intermediate Practitioner"},
     "level_mahir_label":    {"id": "🌳 Praktisi Mahir",                 "en": "🌳 Advanced Practitioner"},
-    "level_advanced_label": {"id": "🪷 Advanced (Sumpah Bodhisattva)",  "en": "🪷 Advanced (Bodhisattva Vows)"},
-    "level_super_label":    {"id": "💎 Super Advanced (Sumpah Tantra)", "en": "💎 Super Advanced (Tantric Vows)"},
+    "level_advanced_label": {"id": "🪷 Bodhisattva", "en": "🪷 Bodhisattva"},
+    "level_super_label":    {"id": "💎 Diamond",    "en": "💎 Diamond"},
     "level_dipilih": {
         "id": "👍 Level Anda: *{label}*\n_{desc}_",
         "en": "👍 Your level: *{label}*\n_{desc}_",
@@ -394,7 +394,7 @@ STRINGS = {
     # ─── SUMPAH (ADVANCED/SUPER ADVANCED) ────────────────────────────────────
 
     "sumpah_label_advanced": {"id": "Sumpah Bodhisattva 🪷", "en": "Bodhisattva Vow 🪷"},
-    "sumpah_label_super":    {"id": "Sumpah Tantra 💎",       "en": "Tantric Vow 💎"},
+    "sumpah_label_super":    {"id": "Sumpah Diamond 💎",     "en": "Diamond Vow 💎"},
     "sumpah_pilih_urutan": {
         "id": (
             "📿 *{label}*\n"
@@ -601,14 +601,14 @@ STRINGS = {
     "ganti_dari_hari_prompt": {
         "id": (
             "📅 *Masukkan nomor hari dalam siklus:*\n\n"
-            "Advanced: 1–147\n"
-            "Super Advanced: 1–44\n\n"
+            "Bodhisattva: 1–147\n"
+            "Diamond: 1–44\n\n"
             "_Contoh: ketik *10* untuk memulai dari hari ke-10._"
         ),
         "en": (
             "📅 *Enter the day number in the cycle:*\n\n"
-            "Advanced: 1–147\n"
-            "Super Advanced: 1–44\n\n"
+            "Bodhisattva: 1–147\n"
+            "Diamond: 1–44\n\n"
             "_Example: type *10* to start from day 10._"
         ),
     },
@@ -690,8 +690,8 @@ STRINGS = {
     # ─── LEVEL UPGRADE ───────────────────────────────────────────────────────
 
     "ubah_level_judul": {
-        "id": "📊 *Ubah Level Praktik*\n\nLevel Anda saat ini: *{level}*\n\nPilih level baru. Advanced dan Super Advanced memerlukan kata sandi.",
-        "en": "📊 *Change Practice Level*\n\nYour current level: *{level}*\n\nChoose a new level. Advanced and Super Advanced require a password.",
+        "id": "📊 *Ubah Level Praktik*\n\nLevel Anda saat ini: *{level}*\n\nPilih level baru. Bodhisattva dan Diamond memerlukan kata sandi.",
+        "en": "📊 *Change Practice Level*\n\nYour current level: *{level}*\n\nChoose a new level. Bodhisattva and Diamond require a password.",
     },
     "password_prompt": {
         "id": "🔐 *{label}*\n\nMasukkan kata sandi untuk mengakses level ini:",
@@ -786,13 +786,13 @@ STRINGS = {
     "upgrade_berhasil_super": {
         "id": (
             "✅ Level berhasil diubah ke *{label}*!\n\n"
-            "💎 *Sumpah Tantra* akan dikirim 6 kali sehari.\n"
+            "💎 *Sumpah Diamond* akan dikirim 6 kali sehari.\n"
             "Rotasi 44 hari — 265 sumpah dalam satu siklus.\n\n"
             "_Semoga praktik Anda semakin mendalam._ 🙏"
         ),
         "en": (
             "✅ Level successfully changed to *{label}*!\n\n"
-            "💎 *Tantric Vows* will be sent 6 times a day.\n"
+            "💎 *Diamond Vows* will be sent 6 times a day.\n"
             "44-day rotation — 265 vows in one cycle.\n\n"
             "_May your practice deepen._ 🙏"
         ),
@@ -951,8 +951,8 @@ STRINGS = {
         "en": "✅ *Vow times saved!*\n\n{ringkasan}\n\n_Changes take effect from tomorrow._ 🙏",
     },
     "setvowtime_only_advanced": {
-        "id": "⚠️ Perintah ini hanya untuk level Advanced dan Super Advanced.",
-        "en": "⚠️ This command is only available for Advanced and Super Advanced levels.",
+        "id": "⚠️ Perintah ini hanya untuk level Bodhisattva dan Diamond.",
+        "en": "⚠️ This command is only available for Bodhisattva and Diamond levels.",
     },
 }
 
