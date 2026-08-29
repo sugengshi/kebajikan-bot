@@ -47,7 +47,7 @@ async def post_init(application):
         BotCommand("level",         "Ubah level praktik"),
         BotCommand("language",      "Ganti bahasa"),
         BotCommand("setjam",        "Atur jam notifikasi"),
-        BotCommand("setjamsumpah",  "Atur jam notifikasi sumpah (Bodhisattva/Diamond)"),
+        BotCommand("setjamsumpah",  "Atur jam 6 sesi refleksi (Mahir/Bodhisattva/Diamond)"),
     ]
     # English commands
     en_commands = [
@@ -61,7 +61,7 @@ async def post_init(application):
         BotCommand("level",       "Change practice level"),
         BotCommand("language",    "Change language"),
         BotCommand("settime",     "Set notification times"),
-        BotCommand("setvowtime",  "Set vow notification times (Bodhisattva/Diamond)"),
+        BotCommand("setvowtime",  "Set 6 reflection times (Mahir/Bodhisattva/Diamond)"),
     ]
     from telegram import BotCommandScopeDefault, BotCommandScopeChat
     await application.bot.set_my_commands(id_commands)

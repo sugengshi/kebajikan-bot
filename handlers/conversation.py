@@ -1467,7 +1467,7 @@ async def cmd_setvowtime(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = db_user.get("bahasa", "id")
     context.user_data["lang"] = lang
     level = db_user.get("level", "pemula")
-    if level not in ("advanced", "super_advanced"):
+    if level not in ("advanced", "super_advanced", "mahir"):
         await update.message.reply_text(
             T("setvowtime_only_advanced", lang), parse_mode="Markdown"
         )

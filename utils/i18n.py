@@ -951,8 +951,8 @@ STRINGS = {
         "en": "✅ *Vow times saved!*\n\n{ringkasan}\n\n_Changes take effect from tomorrow._ 🙏",
     },
     "setvowtime_only_advanced": {
-        "id": "⚠️ Perintah ini hanya untuk level Bodhisattva dan Diamond.",
-        "en": "⚠️ This command is only available for Bodhisattva and Diamond levels.",
+        "id": "⚠️ Perintah ini hanya untuk level Mahir, Bodhisattva, dan Diamond.",
+        "en": "⚠️ This command is only available for Mahir, Bodhisattva, and Diamond levels.",
     },
 }
 

@@ -28,6 +28,8 @@ from data.vows import (
 logger = logging.getLogger(__name__)
 WIB = pytz.timezone("Asia/Jakarta")
 
+MAHIR_TIMES_DEFAULT = ["07:00", "09:30", "12:00", "14:30", "17:00", "19:30"]
+
 
 def _user_today(db_user: dict):
     """Return today's date in the user's own timezone (avoids UTC-midnight off-by-one)."""
@@ -154,6 +156,23 @@ async def _dispatch(bot: Bot, user_id: int, u: dict, jam: str):
                 await kirim_jadwal_sumpah_pagi(bot, user_id, level)
             elif jam == _jam_minus_30(u.get("jam_ringkasan", "21:00")):
                 await kirim_pengingat_sumpah_kosong(bot, user_id, level, u, vow_times)
+            elif jam == u.get("jam_ringkasan", "21:00"):
+                await kirim_ringkasan(bot, user_id)
+            elif jam == u.get("jam_cofmed", "21:30"):
+                await kirim_arsip(bot, user_id)
+            return
+
+        # Mahir: 6 reflection slots via vow_times + standard bookends
+        if level == "mahir":
+            custom = u.get("vow_times", "")
+            mahir_times = custom.split() if custom else list(MAHIR_TIMES_DEFAULT)
+            if jam == u.get("jam_fokus", "06:00"):
+                await _kirim_06(bot, user_id)
+            elif jam in mahir_times:
+                slot_idx = mahir_times.index(jam)
+                await kirim_sesi_mahir(bot, user_id, slot_idx)
+            elif jam == u.get("jam_malam", "20:00"):
+                await kirim_malam(bot, user_id)
             elif jam == u.get("jam_ringkasan", "21:00"):
                 await kirim_ringkasan(bot, user_id)
             elif jam == u.get("jam_cofmed", "21:30"):
@@ -447,7 +466,7 @@ async def _kirim_06(bot: Bot, user_id: int):
 
 
 async def kirim_sesi(bot: Bot, user_id: int, sesi: str):
-    """07:00 / 12:00 / 18:00 — kirim pertanyaan refleksi."""
+    """07:00 / 12:00 / 18:00 — kirim pertanyaan refleksi (pemula/menengah)."""
     db_user = await get_user(user_id)
     if not db_user:
         return
@@ -455,15 +474,27 @@ async def kirim_sesi(bot: Bot, user_id: int, sesi: str):
     if not fokus:
         return
 
-    level = db_user.get("level", "pemula")
-    if level == "mahir":
-        rotasi = db_user.get("rotasi_index", 0)
-        k_id = fokus[rotasi % len(fokus)]
-        await update_user(user_id, rotasi_index=(rotasi + 1) % len(fokus))
-    else:
-        idx = {"pagi": 0, "siang": 1, "sore": 2}.get(sesi, 0)
-        k_id = fokus[min(idx, len(fokus) - 1)]
+    idx = {"pagi": 0, "siang": 1, "sore": 2}.get(sesi, 0)
+    k_id = fokus[min(idx, len(fokus) - 1)]
+    await set_pending(user_id, sesi, k_id)
+    lang = db_user.get("bahasa", "id") or "id"
+    await bot.send_message(
+        chat_id=user_id,
+        text=format_pertanyaan_refleksi(sesi, k_id, "positif", lang),
+        parse_mode="Markdown"
+    )
 
+
+async def kirim_sesi_mahir(bot: Bot, user_id: int, slot_idx: int):
+    """Send refleksi ke-N for mahir users — each slot maps to one of today's 6 virtues."""
+    db_user = await get_user(user_id)
+    if not db_user:
+        return
+    fokus = db_user.get("kebajikan_fokus", [])
+    if not fokus or len(fokus) < 6:
+        return
+    k_id = fokus[slot_idx % len(fokus)]
+    sesi = f"refleksi_{slot_idx + 1}"
     await set_pending(user_id, sesi, k_id)
     lang = db_user.get("bahasa", "id") or "id"
     await bot.send_message(
