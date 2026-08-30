@@ -433,6 +433,10 @@ async def cmd_refleksi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if level in ("advanced", "super_advanced"):
         return await _tampilkan_pilihan_sumpah(update.message, context, lang, db_user)
 
+    # ── Mahir: show 6 refleksi slots with status ──
+    if level == "mahir":
+        return await _tampilkan_pilihan_refleksi_mahir(update.message, context, lang, db_user)
+
     # ── Standard levels: show kebajikan ──
     fokus = db_user.get("kebajikan_fokus", [])
     if not fokus:
@@ -887,6 +891,67 @@ def _format_vow_pair_for_reflect(vow_list: list, vow_dict: dict, label: str, jam
     lines.append("─────────────────────")
     lines.append(f"_{T('sumpah_renungan', lang)}_")
     return "\n".join(lines)
+
+
+async def _tampilkan_pilihan_refleksi_mahir(message, context, lang: str, db_user: dict):
+    """Mahir /refleksi: show 6 slots with ✅/○ status and virtue name."""
+    user_id = message.chat.id
+    fokus = db_user.get("kebajikan_fokus", [])
+    if not fokus or len(fokus) < 6:
+        await message.reply_text(T("kebajikan_belum_ada", lang))
+        return ConversationHandler.END
+
+    custom = db_user.get("vow_times", "")
+    times = custom.split() if custom else list(VOW_JAM_DEFAULTS)
+
+    catatan = await get_catatan_hari_ini(user_id)
+    filled_sesi = {c["sesi"] for c in catatan}
+
+    rows = []
+    for i in range(6):
+        sesi_key = f"refleksi_{i + 1}"
+        is_filled = sesi_key in filled_sesi
+        k_id = fokus[i] if i < len(fokus) else None
+        k = KEBAJIKAN.get(k_id, {}) if k_id else {}
+        slot_time = times[i] if i < len(times) else "—"
+        status = "✅" if is_filled else "○"
+        rows.append([InlineKeyboardButton(
+            f"{status} {slot_time} — {k.get('emoji', '')}{k.get('nama', '?')}",
+            callback_data=f"refleksi_mahir_{i}"
+        )])
+
+    await message.reply_text(
+        T("refleksi_pilih_slot_mahir", lang),
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(rows)
+    )
+    return PILIH_REFLEKSI
+
+
+async def pilih_slot_mahir_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User chose a mahir refleksi slot — start reflection directly."""
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+    user_id = query.from_user.id
+    slot_idx = int(query.data.replace("refleksi_mahir_", ""))
+
+    db_user = await get_user(user_id)
+    if not db_user:
+        return ConversationHandler.END
+    fokus = db_user.get("kebajikan_fokus", [])
+    k_id = fokus[slot_idx % len(fokus)]
+    sesi = f"refleksi_{slot_idx + 1}"
+
+    await set_pending(user_id, sesi, k_id)
+    context.user_data["refleksi_k_id"] = k_id
+    context.user_data["refleksi_sesi"]  = sesi
+    await query.edit_message_reply_markup(reply_markup=None)
+    await query.message.reply_text(
+        format_pertanyaan_refleksi(sesi, k_id, "positif", lang),
+        parse_mode="Markdown"
+    )
+    return REFLEKSI_POSITIF
 
 
 async def _tampilkan_pilihan_refleksi(message, context, lang: str, fokus: list, filled: set):
@@ -1720,6 +1785,7 @@ def build_conversation_handler():
             ],
             PILIH_REFLEKSI: [
                 CallbackQueryHandler(pilih_kebajikan_refleksi_cb, pattern="^refleksi_k_"),
+                CallbackQueryHandler(pilih_slot_mahir_cb,         pattern="^refleksi_mahir_"),
                 CallbackQueryHandler(pilih_sumpah_slot_cb,        pattern="^sumpah_slot_"),
                 CallbackQueryHandler(sumpah_urutan_cb,            pattern="^sumpah_order_"),
             ],

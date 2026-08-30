@@ -298,6 +298,16 @@ STRINGS = {
             "_(This is your vow schedule for today)_"
         ),
     },
+    "refleksi_pilih_slot_mahir": {
+        "id": (
+            "📝 *Pilih sesi refleksi yang ingin Anda isi:*\n\n"
+            "_(✅ = sudah diisi, ○ = belum diisi)_"
+        ),
+        "en": (
+            "📝 *Choose the reflection session to fill in:*\n\n"
+            "_(✅ = done, ○ = not yet filled)_"
+        ),
+    },
     "refleksi_pilih_kebajikan": {
         "id": (
             "📝 *Pilih kebajikan yang ingin Anda refleksikan:*\n\n"
