@@ -94,7 +94,7 @@ def init_scheduler(bot: Bot) -> AsyncIOScheduler:
     )
     _scheduler.add_job(
         kirim_pengingat,
-        CronTrigger(minute="5,35", timezone=WIB),
+        CronTrigger(minute="15", timezone=WIB),
         args=[bot],
         id="pengingat",
         replace_existing=True,

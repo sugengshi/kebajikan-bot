@@ -32,7 +32,13 @@ SESI_KEY = {
 
 
 def _sesi_label(sesi: str, lang: str) -> str:
-    return T(SESI_KEY.get(sesi, "sesi_pagi_label"), lang)
+    if sesi in SESI_KEY:
+        return T(SESI_KEY[sesi], lang)
+    # Handle refleksi_N pattern for mahir level
+    if sesi.startswith("refleksi_"):
+        n = sesi.replace("refleksi_", "")
+        return f"Refleksi ke-{n}" if lang == "id" else f"Reflection {n}"
+    return T("sesi_pagi_label", lang)
 
 
 def format_sambutan(lang: str = "id") -> str:
