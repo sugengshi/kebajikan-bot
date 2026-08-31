@@ -486,7 +486,9 @@ async def kirim_sesi(bot: Bot, user_id: int, sesi: str):
 
 
 async def kirim_sesi_mahir(bot: Bot, user_id: int, slot_idx: int):
-    """Send refleksi ke-N for mahir users — each slot maps to one of today's 6 virtues."""
+    """Send refleksi ke-N for mahir users — each slot maps to one of today's 6 virtues.
+    Does NOT call set_pending to avoid overwriting an active /refleksi conversation.
+    """
     db_user = await get_user(user_id)
     if not db_user:
         return
@@ -495,7 +497,6 @@ async def kirim_sesi_mahir(bot: Bot, user_id: int, slot_idx: int):
         return
     k_id = fokus[slot_idx % len(fokus)]
     sesi = f"refleksi_{slot_idx + 1}"
-    await set_pending(user_id, sesi, k_id)
     lang = db_user.get("bahasa", "id") or "id"
     await bot.send_message(
         chat_id=user_id,

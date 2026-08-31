@@ -1040,11 +1040,16 @@ async def pilih_sesi_refleksi_cb(update: Update, context: ContextTypes.DEFAULT_T
 async def terima_refleksi_positif(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = await _lang(user_id, context)
-    pending = await get_pending(user_id)
-    if not pending:
-        return ConversationHandler.END
-    k_id = pending["kebajikan_id"]
-    sesi = pending["sesi"]
+    # Prefer context.user_data (set by pilih_slot_mahir_cb / pilih_sesi_refleksi_cb)
+    # so the scheduler's set_pending for the *next* slot can't clobber an active session.
+    k_id = context.user_data.get("refleksi_k_id")
+    sesi = context.user_data.get("refleksi_sesi")
+    if not k_id or not sesi:
+        pending = await get_pending(user_id)
+        if not pending:
+            return ConversationHandler.END
+        k_id = pending["kebajikan_id"]
+        sesi = pending["sesi"]
     await set_pending(user_id, sesi, k_id, step="negatif", temp_positif=update.message.text)
     await update.message.reply_text(
         format_pertanyaan_refleksi(sesi, k_id, "negatif", lang), parse_mode="Markdown"
@@ -1055,11 +1060,15 @@ async def terima_refleksi_positif(update: Update, context: ContextTypes.DEFAULT_
 async def terima_refleksi_negatif(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = await _lang(user_id, context)
+    # Same: prefer context.user_data to avoid cross-slot contamination.
+    k_id = context.user_data.get("refleksi_k_id")
+    sesi = context.user_data.get("refleksi_sesi")
     pending = await get_pending(user_id)
     if not pending:
         return ConversationHandler.END
-    k_id = pending["kebajikan_id"]
-    sesi = pending["sesi"]
+    if not k_id or not sesi:
+        k_id = pending["kebajikan_id"]
+        sesi = pending["sesi"]
     await set_pending(user_id, sesi, k_id, step="rencana",
                       temp_positif=pending.get("temp_positif", ""),
                       temp_negatif=update.message.text)
@@ -1078,8 +1087,9 @@ async def terima_refleksi_rencana(update: Update, context: ContextTypes.DEFAULT_
     positif = pending.get("temp_positif", "")
     negatif = pending.get("temp_negatif", "")
     rencana = update.message.text
-    k_id = pending["kebajikan_id"]
-    sesi = pending["sesi"]
+    # Prefer context.user_data for k_id/sesi consistency with Q1/Q2.
+    k_id = context.user_data.pop("refleksi_k_id", None) or pending["kebajikan_id"]
+    sesi = context.user_data.pop("refleksi_sesi", None) or pending["sesi"]
     await save_catatan(user_id, sesi, k_id, positif, negatif, rencana)
     await clear_pending(user_id)
     await update.message.reply_text(
