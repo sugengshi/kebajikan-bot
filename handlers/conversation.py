@@ -1298,6 +1298,17 @@ async def cmd_tambahan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return TAMBAHAN_MALAM_INPUT
 
 
+async def mulai_tambahan_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Entry point when user taps '✏️ Tambah' button in the scheduled 20:00 message."""
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+    await query.edit_message_text(
+        format_pertanyaan_tambahan_malam(lang), parse_mode="Markdown"
+    )
+    return TAMBAHAN_MALAM_INPUT
+
+
 async def terima_tambahan_malam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = await _lang(user_id, context)
@@ -1728,6 +1739,7 @@ def build_conversation_handler():
             CommandHandler("change",   cmd_ganti),
             CommandHandler("tambahan", cmd_tambahan),
             CommandHandler("add",      cmd_tambahan),
+            CallbackQueryHandler(mulai_tambahan_cb, pattern="^mulai_tambahan$"),
             CommandHandler("level",    cmd_level),
             CommandHandler("language", cmd_language),
             CommandHandler("setjam",        cmd_setjam),
@@ -1772,6 +1784,7 @@ def build_conversation_handler():
             TAMBAHAN_MALAM_INPUT: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, terima_tambahan_malam),
                 CallbackQueryHandler(tidak_ada_tambahan_cb, pattern="^tidak_ada_tambahan$"),
+                CallbackQueryHandler(mulai_tambahan_cb,    pattern="^mulai_tambahan$"),
             ],
             UPGRADE_PASSWORD: [
                 CallbackQueryHandler(upgrade_level_cb, pattern="^upgrade_"),

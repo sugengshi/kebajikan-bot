@@ -508,12 +508,14 @@ async def kirim_sesi_mahir(bot: Bot, user_id: int, slot_idx: int):
 async def kirim_malam(bot: Bot, user_id: int):
     """20:00 — tanya tambahan perbuatan baik."""
     lang = await get_user_lang(user_id)
+    tambah_label = "✏️ Tambah sekarang" if lang == "id" else "✏️ Add now"
     await bot.send_message(
         chat_id=user_id,
         text=format_pertanyaan_tambahan_malam(lang),
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton(T("tambahan_tidak_ada_label", lang), callback_data="tidak_ada_tambahan")]
+            [InlineKeyboardButton(tambah_label, callback_data="mulai_tambahan")],
+            [InlineKeyboardButton(T("tambahan_tidak_ada_label", lang), callback_data="tidak_ada_tambahan")],
         ])
     )
 
