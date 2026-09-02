@@ -290,8 +290,10 @@ async def pilih_level_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["goal"] = ""
         context.user_data["mahir_onboarding"] = True
         tz = context.user_data.get("timezone", "Asia/Jakarta")
+        from datetime import date as _date
         await update_user(query.from_user.id, level="mahir", kebajikan_fokus=dipilih,
-                          tujuan_smart="", onboarding_selesai=1, timezone=tz)
+                          tujuan_smart="", onboarding_selesai=1, timezone=tz,
+                          join_date=_date.today())
         await query.edit_message_text(T("mahir_sambutan_jam", lang), parse_mode="Markdown")
         context.user_data["vow_times_new"] = list(VOW_JAM_DEFAULTS)
         return await _vow_jam_next_slot(query.message, context, lang, slot=0)
@@ -1688,11 +1690,13 @@ async def _apply_level_upgrade(source, context, target, join_date=None):
         db_user_pre = await get_user(user_id)
         jd = (db_user_pre or {}).get("join_date")
         if jd:
-            from datetime import datetime as _dt
             jd = jd.date() if hasattr(jd, "date") else jd
             day_num = (date.today() - jd).days + 1
         else:
+            # No prior join_date — start from Day 1 and save today as join_date
+            jd = date.today()
             day_num = 1
+            update_kwargs["join_date"] = jd
         update_kwargs["kebajikan_fokus"] = get_mahir_virtues_for_day(day_num)
     elif target in ("advanced", "super_advanced"):
         update_kwargs["join_date"] = join_date if join_date else date.today()
