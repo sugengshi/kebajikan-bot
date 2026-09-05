@@ -432,12 +432,15 @@ async def _kirim_06(bot: Bot, user_id: int):
     # ── Mahir: auto-assign today's rotating 6 virtues ──────────────────────────
     if level == "mahir":
         join_date = db_user.get("join_date")
+        today_date = datetime.now(WIB).date()
         if join_date:
-            today_date = datetime.now(WIB).date()
             jd = join_date.date() if hasattr(join_date, "date") else join_date
             day_num = (today_date - jd).days + 1
         else:
+            # First time this fires for a mahir user with no join_date —
+            # save today so rotation works from tomorrow onwards.
             day_num = 1
+            await update_user(user_id, join_date=today_date)
         new_fokus = get_mahir_virtues_for_day(day_num)
         await update_user(user_id, kebajikan_fokus=new_fokus)
         lines = [T("mahir_hari_ini", lang, day=day_num)]

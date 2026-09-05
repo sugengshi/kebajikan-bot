@@ -1113,6 +1113,19 @@ async def cmd_ganti(update: Update, context: ContextTypes.DEFAULT_TYPE):
     level = db_user.get("level", "pemula")
     context.user_data["level"] = level
 
+    # Mahir: allow setting which rotation day (1–5)
+    if level == "mahir":
+        context.user_data["upgrade_target"] = "mahir"
+        prompt = (
+            "📅 *Ganti hari rotasi Mahir*\n\nKetik angka hari ke berapa (1–5):\n"
+            "Hari 1 = kebajikan 1–6\nHari 2 = 7–10,1–2\nHari 3 = 3–8\nHari 4 = 9–10,1–4\nHari 5 = 5–10"
+            if lang == "id" else
+            "📅 *Set Mahir rotation day*\n\nType a day number (1–5):\n"
+            "Day 1 = virtues 1–6\nDay 2 = 7–10,1–2\nDay 3 = 3–8\nDay 4 = 9–10,1–4\nDay 5 = 5–10"
+        )
+        await update.message.reply_text(prompt, parse_mode="Markdown")
+        return PILIH_HARI_ROTASI
+
     # Advanced/Super: offer two options — by vow number or by day number
     if level in ("advanced", "super_advanced"):
         context.user_data["upgrade_target"] = level
@@ -1158,9 +1171,39 @@ async def ganti_adv_pilihan_cb(update: Update, context: ContextTypes.DEFAULT_TYP
 async def terima_hari_rotasi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Receive day number directly and update join_date accordingly."""
     from data.vows import day_to_start_date, get_adv_vows_for_day, get_sa_vows_for_day
+    from datetime import timedelta
     user_id = update.effective_user.id
     lang = await _lang(user_id, context)
     target = context.user_data.get("upgrade_target", "advanced")
+
+    # ── Mahir: day 1–5 cycle ──
+    if target == "mahir":
+        max_day = 5
+        try:
+            day_number = int(update.message.text.strip())
+            if not 1 <= day_number <= max_day:
+                raise ValueError
+        except ValueError:
+            err = f"Ketik angka 1–{max_day}." if lang == "id" else f"Type a number 1–{max_day}."
+            await update.message.reply_text(err)
+            return PILIH_HARI_ROTASI
+        # join_date = today shifted back so that today is day_number
+        join_date = date.today() - timedelta(days=day_number - 1)
+        new_fokus = get_mahir_virtues_for_day(day_number)
+        await update_user(user_id, join_date=join_date, kebajikan_fokus=new_fokus)
+        k_names = ", ".join(
+            f"{KEBAJIKAN.get(k, {}).get('emoji', '')} {KEBAJIKAN.get(k, {}).get('nama', '')}"
+            for k in new_fokus
+        )
+        confirm = (
+            f"✅ Hari ke-{day_number} disetel. Kebajikan hari ini:\n{k_names}"
+            if lang == "id" else
+            f"✅ Day {day_number} set. Today's virtues:\n{k_names}"
+        )
+        await update.message.reply_text(confirm, parse_mode="Markdown")
+        context.user_data.pop("upgrade_target", None)
+        return ConversationHandler.END
+
     max_day = 147 if target == "advanced" else 44
 
     try:
