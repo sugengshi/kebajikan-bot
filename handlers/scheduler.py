@@ -590,13 +590,40 @@ async def kirim_pengingat(bot: Bot):
     async def _cek(user_id: int):
         try:
             pending = await get_pending(user_id)
-            if pending:
-                lang = await get_user_lang(user_id)
-                await bot.send_message(
-                    chat_id=user_id,
-                    text=format_pengingat(pending["sesi"], pending["kebajikan_id"], lang),
-                    parse_mode="Markdown"
-                )
+            if not pending:
+                return
+            lang = await get_user_lang(user_id)
+            sesi  = pending["sesi"]
+            k_id  = pending["kebajikan_id"]
+            step  = pending.get("step", "positif")
+
+            # Encode sesi for callback_data (max 64 bytes total)
+            # "pagi"→"pagi", "refleksi_1"→"r1", etc.
+            def _enc(s):
+                return s.replace("refleksi_", "r")
+
+            sesi_enc = _enc(sesi)
+
+            if step == "positif":
+                pos_label = "✅ Positif" if lang == "id" else "✅ Positive"
+                neg_label = "⚠️ Negatif" if lang == "id" else "⚠️ Negative"
+                buttons = [[
+                    InlineKeyboardButton(pos_label, callback_data=f"pr_pos_{k_id}_{sesi_enc}"),
+                    InlineKeyboardButton(neg_label, callback_data=f"pr_neg_{k_id}_{sesi_enc}"),
+                ]]
+            elif step == "negatif":
+                lbl = "⚠️ Lanjutkan" if lang == "id" else "⚠️ Continue"
+                buttons = [[InlineKeyboardButton(lbl, callback_data=f"pr_neg_{k_id}_{sesi_enc}")]]
+            else:  # rencana
+                lbl = "🌱 Lanjutkan" if lang == "id" else "🌱 Continue"
+                buttons = [[InlineKeyboardButton(lbl, callback_data=f"pr_ren_{k_id}_{sesi_enc}")]]
+
+            await bot.send_message(
+                chat_id=user_id,
+                text=format_pengingat(sesi, k_id, lang),
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
         except Exception as e:
             logger.error(f"Error pengingat user {user_id}: {e}")
 

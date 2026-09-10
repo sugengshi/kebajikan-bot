@@ -529,6 +529,60 @@ async def reflect_vow_from_scheduler_cb(update: Update, context: ContextTypes.DE
     return PILIH_REFLEKSI
 
 
+async def pengingat_jawab_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User tapped ✅ Positif or ⚠️ Negatif on a reminder message — enter reflection directly.
+    callback_data format: pr_{step}_{k_id}_{sesi_enc}
+    sesi_enc: "pagi"/"siang"/"sore" or "r1".."r6" for refleksi_1..refleksi_6
+    """
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    lang = await _lang(user_id, context)
+
+    parts = query.data.split("_", 3)   # ["pr", "pos"/"neg"/"ren", k_id_str, sesi_enc]
+    step_code = parts[1]               # "pos", "neg", "ren"
+    k_id = int(parts[2])
+    sesi_enc = parts[3]
+
+    # Decode sesi: "r1"→"refleksi_1", "pagi"→"pagi", etc.
+    if len(sesi_enc) >= 2 and sesi_enc[0] == "r" and sesi_enc[1].isdigit():
+        sesi = f"refleksi_{sesi_enc[1:]}"
+    else:
+        sesi = sesi_enc
+
+    context.user_data["refleksi_k_id"] = k_id
+    context.user_data["refleksi_sesi"]  = sesi
+
+    await query.edit_message_reply_markup(reply_markup=None)
+
+    pending = await get_pending(user_id)
+
+    if step_code == "pos":
+        await set_pending(user_id, sesi, k_id)
+        await query.message.reply_text(
+            format_pertanyaan_refleksi(sesi, k_id, "positif", lang), parse_mode="Markdown"
+        )
+        return REFLEKSI_POSITIF
+
+    elif step_code == "neg":
+        temp_pos = (pending.get("temp_positif", "") if pending else "")
+        await set_pending(user_id, sesi, k_id, step="negatif", temp_positif=temp_pos)
+        await query.message.reply_text(
+            format_pertanyaan_refleksi(sesi, k_id, "negatif", lang), parse_mode="Markdown"
+        )
+        return REFLEKSI_NEGATIF
+
+    else:  # "ren"
+        temp_pos = (pending.get("temp_positif", "") if pending else "")
+        temp_neg = (pending.get("temp_negatif", "") if pending else "")
+        await set_pending(user_id, sesi, k_id, step="rencana",
+                          temp_positif=temp_pos, temp_negatif=temp_neg)
+        await query.message.reply_text(
+            format_pertanyaan_refleksi(sesi, k_id, "rencana", lang), parse_mode="Markdown"
+        )
+        return REFLEKSI_RENCANA
+
+
 async def rewrite_vow_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle yes/no from the 'all done, want to rewrite?' prompt."""
     query = update.callback_query
@@ -1781,6 +1835,7 @@ def build_conversation_handler():
             CommandHandler("refleksi", cmd_refleksi),
             CommandHandler("reflect",  cmd_refleksi),
             CallbackQueryHandler(reflect_vow_from_scheduler_cb, pattern="^reflect_vow_"),
+            CallbackQueryHandler(pengingat_jawab_cb,            pattern="^pr_"),
             CallbackQueryHandler(rewrite_vow_cb, pattern="^rewrite_vow_"),
             CommandHandler("ganti",    cmd_ganti),
             CommandHandler("change",   cmd_ganti),
@@ -1820,13 +1875,16 @@ def build_conversation_handler():
                 CallbackQueryHandler(pilih_kebajikan_cb, pattern="^pilih_k_|^selesai_pilih$"),
             ],
             REFLEKSI_POSITIF: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_refleksi_positif)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_refleksi_positif),
+                CallbackQueryHandler(pengingat_jawab_cb, pattern="^pr_"),
             ],
             REFLEKSI_NEGATIF: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_refleksi_negatif)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_refleksi_negatif),
+                CallbackQueryHandler(pengingat_jawab_cb, pattern="^pr_"),
             ],
             REFLEKSI_RENCANA: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_refleksi_rencana)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, terima_refleksi_rencana),
+                CallbackQueryHandler(pengingat_jawab_cb, pattern="^pr_"),
             ],
             TAMBAHAN_MALAM_INPUT: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, terima_tambahan_malam),
