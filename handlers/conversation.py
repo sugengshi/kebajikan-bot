@@ -1832,7 +1832,7 @@ async def _apply_level_upgrade(source, context, target, join_date=None):
 
 def _kb_ganti_timezone():
     """Timezone picker with gtz_ prefix (used for post-onboarding changes)."""
-    keys = ["WIB","WITA","WIT","SGT","MYT","IST","JST","HKT","AEST","GMT","CET","EET","EST","CST","PST"]
+    keys = ["WIB","WITA","WIT","SGT","MYT","IST","JST","HKT","AEST","GMT","CET","EET","EST","CST","MST","PST"]
     full = {
         "WIB":  "Asia/Jakarta",
         "WITA": "Asia/Makassar",
@@ -1848,6 +1848,7 @@ def _kb_ganti_timezone():
         "EET":  "Europe/Athens",
         "EST":  "America/New_York",
         "CST":  "America/Chicago",
+        "MST":  "America/Phoenix",
         "PST":  "America/Los_Angeles",
     }
     rows = []
@@ -1896,7 +1897,8 @@ async def ganti_timezone_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "SGT":"Asia/Singapore","MYT":"Asia/Kuala_Lumpur","IST":"Asia/Kolkata",
         "JST":"Asia/Tokyo","HKT":"Asia/Hong_Kong","AEST":"Australia/Sydney",
         "GMT":"UTC","CET":"Europe/Paris","EET":"Europe/Athens",
-        "EST":"America/New_York","CST":"America/Chicago","PST":"America/Los_Angeles",
+        "EST":"America/New_York","CST":"America/Chicago",
+        "MST":"America/Phoenix","PST":"America/Los_Angeles",
     }
     tz_value = full.get(tz_key, "Asia/Jakarta")
     await update_user(user_id, timezone=tz_value)
