@@ -1828,6 +1828,90 @@ async def _apply_level_upgrade(source, context, target, join_date=None):
 
 # ─── CONVERSATION HANDLER ────────────────────────────────────────────────────
 
+# ─── /settimezone / /setzone ─────────────────────────────────────────────────
+
+def _kb_ganti_timezone():
+    """Timezone picker with gtz_ prefix (used for post-onboarding changes)."""
+    keys = ["WIB","WITA","WIT","SGT","MYT","IST","JST","HKT","AEST","GMT","CET","EET","EST","CST","PST"]
+    full = {
+        "WIB":  "Asia/Jakarta",
+        "WITA": "Asia/Makassar",
+        "WIT":  "Asia/Jayapura",
+        "SGT":  "Asia/Singapore",
+        "MYT":  "Asia/Kuala_Lumpur",
+        "IST":  "Asia/Kolkata",
+        "JST":  "Asia/Tokyo",
+        "HKT":  "Asia/Hong_Kong",
+        "AEST": "Australia/Sydney",
+        "GMT":  "UTC",
+        "CET":  "Europe/Paris",
+        "EET":  "Europe/Athens",
+        "EST":  "America/New_York",
+        "CST":  "America/Chicago",
+        "PST":  "America/Los_Angeles",
+    }
+    rows = []
+    for k in keys:
+        tz_val = full[k]
+        try:
+            import pytz as _pytz
+            now_local = datetime.now(_pytz.timezone(tz_val))
+            offset = now_local.strftime("%z")     # "+0700"
+            hr, mn = int(offset[1:3]), int(offset[3:5])
+            sign = "+" if offset[0] != "-" else "-"
+            offset_str = f"UTC{sign}{hr}" if mn == 0 else f"UTC{sign}{hr}:{mn:02d}"
+        except Exception:
+            offset_str = ""
+        rows.append([InlineKeyboardButton(
+            f"{k}  {tz_val}  ({offset_str})",
+            callback_data=f"gtz_{k}"
+        )])
+    return InlineKeyboardMarkup(rows)
+
+
+async def cmd_settimezone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    lang = await _lang(user_id, context)
+    db_user = await get_user(user_id)
+    current_tz = (db_user or {}).get("timezone", "Asia/Jakarta")
+    prompt = (
+        f"🌍 *Ganti Zona Waktu*\n\nZona waktu sekarang: `{current_tz}`\n\nPilih zona waktu baru:"
+        if lang == "id" else
+        f"🌍 *Change Timezone*\n\nCurrent timezone: `{current_tz}`\n\nSelect your new timezone:"
+    )
+    await update.message.reply_text(prompt, parse_mode="Markdown",
+                                    reply_markup=_kb_ganti_timezone())
+    return PILIH_TIMEZONE
+
+
+async def ganti_timezone_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Save new timezone chosen via /settimezone (does NOT continue to onboarding)."""
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    lang = await _lang(user_id, context)
+    tz_key = query.data.replace("gtz_", "")
+    full = {
+        "WIB":"Asia/Jakarta","WITA":"Asia/Makassar","WIT":"Asia/Jayapura",
+        "SGT":"Asia/Singapore","MYT":"Asia/Kuala_Lumpur","IST":"Asia/Kolkata",
+        "JST":"Asia/Tokyo","HKT":"Asia/Hong_Kong","AEST":"Australia/Sydney",
+        "GMT":"UTC","CET":"Europe/Paris","EET":"Europe/Athens",
+        "EST":"America/New_York","CST":"America/Chicago","PST":"America/Los_Angeles",
+    }
+    tz_value = full.get(tz_key, "Asia/Jakarta")
+    await update_user(user_id, timezone=tz_value)
+    context.user_data["timezone"] = tz_value
+    confirm = (
+        f"✅ Zona waktu berhasil diubah ke *{tz_key}* (`{tz_value}`).\n\n"
+        f"Semua notifikasi sekarang mengikuti waktu lokal Anda. 🌏"
+        if lang == "id" else
+        f"✅ Timezone updated to *{tz_key}* (`{tz_value}`).\n\n"
+        f"All notifications will now follow your local time. 🌏"
+    )
+    await query.edit_message_text(confirm, parse_mode="Markdown")
+    return ConversationHandler.END
+
+
 def build_conversation_handler():
     return ConversationHandler(
         entry_points=[
@@ -1848,6 +1932,8 @@ def build_conversation_handler():
             CommandHandler("settime",       cmd_setjam),
             CommandHandler("setvowtime",    cmd_setvowtime),
             CommandHandler("setjamsumpah",  cmd_setvowtime),
+            CommandHandler("settimezone",   cmd_settimezone),
+            CommandHandler("setzone",       cmd_settimezone),
         ],
         states={
             PILIH_BAHASA: [
@@ -1855,7 +1941,8 @@ def build_conversation_handler():
                 CallbackQueryHandler(ganti_bahasa_cb, pattern="^lang_"),
             ],
             PILIH_TIMEZONE: [
-                CallbackQueryHandler(pilih_timezone_cb, pattern="^tz_"),
+                CallbackQueryHandler(pilih_timezone_cb,  pattern="^tz_"),
+                CallbackQueryHandler(ganti_timezone_cb,  pattern="^gtz_"),
             ],
             PILIH_LEVEL: [
                 CallbackQueryHandler(pilih_level_cb, pattern="^level_"),

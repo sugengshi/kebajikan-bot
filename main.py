@@ -48,6 +48,7 @@ async def post_init(application):
         BotCommand("language",      "Ganti bahasa"),
         BotCommand("setjam",        "Atur jam notifikasi"),
         BotCommand("setjamsumpah",  "Atur jam 6 sesi refleksi (Mahir/Bodhisattva/Diamond)"),
+        BotCommand("settimezone",   "Ganti zona waktu (untuk perjalanan)"),
     ]
     # English commands
     en_commands = [
@@ -62,6 +63,7 @@ async def post_init(application):
         BotCommand("language",    "Change language"),
         BotCommand("settime",     "Set notification times"),
         BotCommand("setvowtime",  "Set 6 reflection times (Mahir/Bodhisattva/Diamond)"),
+        BotCommand("setzone",     "Change timezone (for travel)"),
     ]
     from telegram import BotCommandScopeDefault, BotCommandScopeChat
     await application.bot.set_my_commands(id_commands)
