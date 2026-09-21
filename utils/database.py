@@ -176,9 +176,14 @@ def _pool_conn():
     return _pool.acquire()
 
 
-def _today() -> date:
-    """Return today's date as a date object (required by asyncpg for DATE columns)."""
-    return datetime.now(WIB).date()
+def _today(tz_str: str = "Asia/Jakarta") -> date:
+    """Return today's date as a date object in the given timezone (default WIB)."""
+    import pytz
+    try:
+        tz = pytz.timezone(tz_str)
+    except Exception:
+        tz = WIB
+    return datetime.now(tz).date()
 
 
 # ─── USERS ───────────────────────────────────────────────────────────────────
@@ -245,10 +250,11 @@ async def get_all_users() -> list:
 # ─── CATATAN HARIAN ──────────────────────────────────────────────────────────
 
 async def save_catatan(user_id: int, sesi: str, kebajikan_id: int,
-                       positif: str, negatif: str, rencana: str):
+                       positif: str, negatif: str, rencana: str,
+                       tz_str: str = "Asia/Jakarta"):
     import logging
     _log = logging.getLogger(__name__)
-    tanggal = _today()
+    tanggal = _today(tz_str)
     _log.info(f"save_catatan: user={user_id} sesi={sesi!r} vow={kebajikan_id} tanggal={tanggal}")
     async with _pool_conn() as conn:
         try:
@@ -277,8 +283,8 @@ async def save_catatan(user_id: int, sesi: str, kebajikan_id: int,
                 _log.error(f"save_catatan failed completely: {e2}")
 
 
-async def get_catatan_hari_ini(user_id: int) -> list:
-    tanggal = _today()
+async def get_catatan_hari_ini(user_id: int, tz_str: str = "Asia/Jakarta") -> list:
+    tanggal = _today(tz_str)
     async with _pool_conn() as conn:
         rows = await conn.fetch("""
             SELECT * FROM catatan_harian

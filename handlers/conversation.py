@@ -445,7 +445,8 @@ async def cmd_refleksi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(T("kebajikan_belum_ada", lang))
         return ConversationHandler.END
 
-    catatan_hari_ini = await get_catatan_hari_ini(user_id)
+    user_tz = db_user.get("timezone") or "Asia/Jakarta"
+    catatan_hari_ini = await get_catatan_hari_ini(user_id, tz_str=user_tz)
     filled = {(c["kebajikan_id"], c["sesi"]) for c in catatan_hari_ini}
     sesi_list = ["pagi", "siang", "sore"]
 
@@ -617,12 +618,10 @@ async def _tampilkan_pilihan_sumpah(message, context, lang: str, db_user: dict):
 
     # Check which vow slots already have a catatan today
     # We store vow number as kebajikan_id in save_catatan for advanced levels
-    from utils.database import get_catatan_hari_ini as _get_cat
-    catatan_today = await _get_cat(db_user.get("user_id", 0) if isinstance(db_user, dict) else 0)
-    # get user_id from message
+    user_tz = (db_user or {}).get("timezone") or "Asia/Jakarta"
     try:
         uid = message.chat.id
-        catatan_today = await _get_cat(uid)
+        catatan_today = await get_catatan_hari_ini(uid, tz_str=user_tz)
     except Exception:
         catatan_today = []
     filled_vows = {c["kebajikan_id"] for c in catatan_today}
@@ -696,6 +695,10 @@ async def pilih_sumpah_slot_cb(update: Update, context: ContextTypes.DEFAULT_TYP
     label = T(label_key, lang)
 
     p = _build_vow_params(vow_raw, vow_dict)
+    # Fetch user timezone for correct date computation at save time
+    _db_u = await get_user(user_id)
+    context.user_data["sumpah_user_tz"] = (_db_u or {}).get("timezone") or "Asia/Jakarta"
+
     context.user_data["sumpah_vow_num"]      = p["vow_num"]
     context.user_data["sumpah_vow_en"]       = p["en"]
     context.user_data["sumpah_vow_id"]       = p["id_"]
@@ -852,7 +855,8 @@ async def terima_sumpah_positif(update: Update, context: ContextTypes.DEFAULT_TY
         nums_str = context.user_data.get("sumpah_vow_nums_str", f"#{vow}")
         jam = context.user_data.get("sumpah_vow_jam", "")
         sesi = f"slot_{jam}_{vow}" if jam else _sesi_sekarang()
-        await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
+        user_tz = context.user_data.get("sumpah_user_tz", "Asia/Jakarta")
+        await save_catatan(user_id, sesi, vow, positif, negatif, rencana, tz_str=user_tz)
         if await _maybe_transition_pair(update.message, context, lang, vow, nums_str):
             return PILIH_REFLEKSI
         await update.message.reply_text(
@@ -922,7 +926,8 @@ async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TY
     negatif = context.user_data.get("sumpah_negatif", "")
     jam = context.user_data.get("sumpah_vow_jam", "")
     sesi = f"slot_{jam}_{vow}" if jam else _sesi_sekarang()
-    await save_catatan(user_id, sesi, vow, positif, negatif, rencana)
+    user_tz = context.user_data.get("sumpah_user_tz", "Asia/Jakarta")
+    await save_catatan(user_id, sesi, vow, positif, negatif, rencana, tz_str=user_tz)
     if await _maybe_transition_pair(update.message, context, lang, vow, nums_str):
         return PILIH_REFLEKSI
     await update.message.reply_text(
@@ -960,7 +965,8 @@ async def _tampilkan_pilihan_refleksi_mahir(message, context, lang: str, db_user
     custom = db_user.get("vow_times", "")
     times = custom.split() if custom else list(VOW_JAM_DEFAULTS)
 
-    catatan = await get_catatan_hari_ini(user_id)
+    user_tz = db_user.get("timezone") or "Asia/Jakarta"
+    catatan = await get_catatan_hari_ini(user_id, tz_str=user_tz)
     filled_sesi = {c["sesi"] for c in catatan}
 
     rows = []
@@ -1335,7 +1341,9 @@ async def cmd_kebajikan(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_laporan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = await _lang(user_id, context)
-    catatan = await get_catatan_hari_ini(user_id)
+    db_user = await get_user(user_id)
+    user_tz = (db_user or {}).get("timezone") or "Asia/Jakarta"
+    catatan = await get_catatan_hari_ini(user_id, tz_str=user_tz)
     tambahan = await get_tambahan_malam(user_id)
     if not catatan and not tambahan:
         await update.message.reply_text(T("laporan_kosong", lang))
@@ -1356,9 +1364,10 @@ async def laporan_mode_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = query.from_user.id
     lang = await _lang(user_id, context)
-    catatan = await get_catatan_hari_ini(user_id)
-    tambahan = await get_tambahan_malam(user_id)
     db_user = await get_user(user_id)
+    user_tz = (db_user or {}).get("timezone") or "Asia/Jakarta"
+    catatan = await get_catatan_hari_ini(user_id, tz_str=user_tz)
+    tambahan = await get_tambahan_malam(user_id)
     nama = db_user.get("username", "") if db_user else ""
 
     # Build vow-time map so legacy pagi/siang/sore entries show correct time

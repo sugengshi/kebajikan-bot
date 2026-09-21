@@ -231,9 +231,9 @@ async def kirim_sumpah(bot: Bot, user_id: int, level: str, jam: str, u: dict, vo
         label = T("sumpah_label_super", lang)
         vow_dict = SUPER_ADVANCED_VOWS
 
-    # Check which vow slots are already filled today
-    from utils.database import get_catatan_hari_ini as _get_cat
-    catatan_today = await _get_cat(user_id)
+    # Check which vow slots are already filled today (use user's own timezone)
+    user_tz = db_user.get("timezone") or "Asia/Jakarta"
+    catatan_today = await get_catatan_hari_ini(user_id, tz_str=user_tz)
     filled_vows = {c["kebajikan_id"] for c in catatan_today}
     filled_sesi = {c["sesi"] for c in catatan_today}
 
@@ -322,7 +322,8 @@ async def kirim_pengingat_sumpah_kosong(bot: Bot, user_id: int, level: str,
                   else get_sa_vows_for_day(day_number))
     vow_dict   = ADVANCED_VOWS if level == "advanced" else SUPER_ADVANCED_VOWS
 
-    catatan_today = await get_catatan_hari_ini(user_id)
+    user_tz = db_user.get("timezone") or "Asia/Jakarta"
+    catatan_today = await get_catatan_hari_ini(user_id, tz_str=user_tz)
     filled_vows   = {c["kebajikan_id"] for c in catatan_today}
     filled_sesi   = {c["sesi"] for c in catatan_today}
 
@@ -528,7 +529,8 @@ async def kirim_ringkasan(bot: Bot, user_id: int):
     from utils.messages import build_vow_time_map
     db_user = await get_user(user_id)
     lang = (db_user.get("bahasa", "id") or "id") if db_user else "id"
-    catatan = await get_catatan_hari_ini(user_id)
+    user_tz = (db_user.get("timezone") or "Asia/Jakarta") if db_user else "Asia/Jakarta"
+    catatan = await get_catatan_hari_ini(user_id, tz_str=user_tz)
     tambahan = await get_tambahan_malam(user_id)
 
     vow_time_map = {}
@@ -547,11 +549,12 @@ async def kirim_ringkasan(bot: Bot, user_id: int):
 async def kirim_arsip(bot: Bot, user_id: int):
     """21:30 — arsip pribadi lengkap (semua entri refleksi + tambahan)."""
     from utils.messages import build_vow_time_map
-    catatan = await get_catatan_hari_ini(user_id)
-    tambahan = await get_tambahan_malam(user_id)
     db_user = await get_user(user_id)
     nama = db_user.get("username", "") if db_user else ""
     lang = (db_user.get("bahasa", "id") or "id") if db_user else "id"
+    user_tz = (db_user.get("timezone") or "Asia/Jakarta") if db_user else "Asia/Jakarta"
+    catatan = await get_catatan_hari_ini(user_id, tz_str=user_tz)
+    tambahan = await get_tambahan_malam(user_id)
 
     vow_time_map = {}
     if db_user:
