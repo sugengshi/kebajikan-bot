@@ -112,6 +112,47 @@ def _valid_time(t: str) -> bool:
 
 # ─── KEYBOARDS ───────────────────────────────────────────────────────────────
 
+# Single source of truth for all timezone pickers (onboarding + /settimezone)
+_TZ_KEYS = ["WIB","WITA","WIT","SGT","MYT","IST","JST","HKT","AEST","GMT","CET","EET","EST","CST","MST","PST"]
+_TZ_FULL = {
+    "WIB":  "Asia/Jakarta",
+    "WITA": "Asia/Makassar",
+    "WIT":  "Asia/Jayapura",
+    "SGT":  "Asia/Singapore",
+    "MYT":  "Asia/Kuala_Lumpur",
+    "IST":  "Asia/Kolkata",
+    "JST":  "Asia/Tokyo",
+    "HKT":  "Asia/Hong_Kong",
+    "AEST": "Australia/Sydney",
+    "GMT":  "UTC",
+    "CET":  "Europe/Paris",
+    "EET":  "Europe/Athens",
+    "EST":  "America/New_York",
+    "CST":  "America/Chicago",
+    "MST":  "America/Phoenix",
+    "PST":  "America/Los_Angeles",
+}
+
+def _tz_rows(prefix: str) -> list:
+    """Build timezone button rows with the given callback prefix (tz_ or gtz_)."""
+    rows = []
+    for k in _TZ_KEYS:
+        tz_val = _TZ_FULL[k]
+        try:
+            import pytz as _pytz
+            now_local = datetime.now(_pytz.timezone(tz_val))
+            offset = now_local.strftime("%z")
+            hr, mn = int(offset[1:3]), int(offset[3:5])
+            sign = "+" if offset[0] != "-" else "-"
+            offset_str = f"UTC{sign}{hr}" if mn == 0 else f"UTC{sign}{hr}:{mn:02d}"
+        except Exception:
+            offset_str = ""
+        rows.append([InlineKeyboardButton(
+            f"{k}  {tz_val}  ({offset_str})",
+            callback_data=f"{prefix}{k}"
+        )])
+    return rows
+
 def kb_bahasa():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🇮🇩 Bahasa Indonesia", callback_data="lang_id")],
@@ -119,12 +160,8 @@ def kb_bahasa():
     ])
 
 def kb_timezone():
-    keys = ["WIB","WITA","WIT","SGT","MYT","IST","AEST","GMT","CET","EST","PST"]
-    rows = [[InlineKeyboardButton(
-        f"{'Asia/Jakarta' if k=='WIB' else TIMEZONE_MAP[k]} ({k})",
-        callback_data=f"tz_{k}"
-    )] for k in keys]
-    return InlineKeyboardMarkup(rows)
+    """Onboarding timezone picker (tz_ prefix)."""
+    return InlineKeyboardMarkup(_tz_rows("tz_"))
 
 def kb_level(lang: str = "id"):
     return InlineKeyboardMarkup([
@@ -245,7 +282,7 @@ async def pilih_timezone_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     lang = await _lang(query.from_user.id, context)
     tz_key = query.data.replace("tz_", "")
-    tz_value = TIMEZONE_MAP.get(tz_key, "Asia/Jakarta")
+    tz_value = _TZ_FULL.get(tz_key) or TIMEZONE_MAP.get(tz_key, "Asia/Jakarta")
     context.user_data["timezone"] = tz_value
     await update_user(query.from_user.id, timezone=tz_value)
     await query.edit_message_text(
@@ -1840,43 +1877,8 @@ async def _apply_level_upgrade(source, context, target, join_date=None):
 # ─── /settimezone / /setzone ─────────────────────────────────────────────────
 
 def _kb_ganti_timezone():
-    """Timezone picker with gtz_ prefix (used for post-onboarding changes)."""
-    keys = ["WIB","WITA","WIT","SGT","MYT","IST","JST","HKT","AEST","GMT","CET","EET","EST","CST","MST","PST"]
-    full = {
-        "WIB":  "Asia/Jakarta",
-        "WITA": "Asia/Makassar",
-        "WIT":  "Asia/Jayapura",
-        "SGT":  "Asia/Singapore",
-        "MYT":  "Asia/Kuala_Lumpur",
-        "IST":  "Asia/Kolkata",
-        "JST":  "Asia/Tokyo",
-        "HKT":  "Asia/Hong_Kong",
-        "AEST": "Australia/Sydney",
-        "GMT":  "UTC",
-        "CET":  "Europe/Paris",
-        "EET":  "Europe/Athens",
-        "EST":  "America/New_York",
-        "CST":  "America/Chicago",
-        "MST":  "America/Phoenix",
-        "PST":  "America/Los_Angeles",
-    }
-    rows = []
-    for k in keys:
-        tz_val = full[k]
-        try:
-            import pytz as _pytz
-            now_local = datetime.now(_pytz.timezone(tz_val))
-            offset = now_local.strftime("%z")     # "+0700"
-            hr, mn = int(offset[1:3]), int(offset[3:5])
-            sign = "+" if offset[0] != "-" else "-"
-            offset_str = f"UTC{sign}{hr}" if mn == 0 else f"UTC{sign}{hr}:{mn:02d}"
-        except Exception:
-            offset_str = ""
-        rows.append([InlineKeyboardButton(
-            f"{k}  {tz_val}  ({offset_str})",
-            callback_data=f"gtz_{k}"
-        )])
-    return InlineKeyboardMarkup(rows)
+    """Timezone picker with gtz_ prefix (used for post-onboarding /settimezone)."""
+    return InlineKeyboardMarkup(_tz_rows("gtz_"))
 
 
 async def cmd_settimezone(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1901,15 +1903,7 @@ async def ganti_timezone_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     lang = await _lang(user_id, context)
     tz_key = query.data.replace("gtz_", "")
-    full = {
-        "WIB":"Asia/Jakarta","WITA":"Asia/Makassar","WIT":"Asia/Jayapura",
-        "SGT":"Asia/Singapore","MYT":"Asia/Kuala_Lumpur","IST":"Asia/Kolkata",
-        "JST":"Asia/Tokyo","HKT":"Asia/Hong_Kong","AEST":"Australia/Sydney",
-        "GMT":"UTC","CET":"Europe/Paris","EET":"Europe/Athens",
-        "EST":"America/New_York","CST":"America/Chicago",
-        "MST":"America/Phoenix","PST":"America/Los_Angeles",
-    }
-    tz_value = full.get(tz_key, "Asia/Jakarta")
+    tz_value = _TZ_FULL.get(tz_key, "Asia/Jakarta")
     await update_user(user_id, timezone=tz_value)
     context.user_data["timezone"] = tz_value
     confirm = (
