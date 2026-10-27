@@ -2046,9 +2046,6 @@ def build_conversation_handler():
             CallbackQueryHandler(reflect_vow_from_scheduler_cb, pattern="^reflect_vow_"),
             CallbackQueryHandler(pengingat_jawab_cb,            pattern="^pr_"),
             CallbackQueryHandler(rewrite_vow_cb, pattern="^rewrite_vow_"),
-            # Captures free-text replies to scheduler-sent reflection questions (mahir/pemula)
-            # when the user is not yet in a ConversationHandler state.
-            MessageHandler(filters.TEXT & ~filters.COMMAND, text_when_pending_cb),
             CommandHandler("ganti",    cmd_ganti),
             CommandHandler("change",   cmd_ganti),
             CommandHandler("tambahan", cmd_tambahan),
