@@ -1136,11 +1136,36 @@ async def pilih_sesi_refleksi_cb(update: Update, context: ContextTypes.DEFAULT_T
     return REFLEKSI_POSITIF
 
 
+async def text_when_pending_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Entry point: captures free-text when a scheduled reflection is awaiting an answer.
+
+    kirim_sesi_mahir sends Q1 and calls set_pending, but the user is not yet in a
+    ConversationHandler state.  This entry point detects that situation and routes the
+    user's typed reply into the correct reflection handler.
+    """
+    user_id = update.effective_user.id
+    pending = await get_pending(user_id)
+    if not pending:
+        return ConversationHandler.END
+    step = pending.get("step", "positif")
+    # Populate context.user_data so downstream handlers don't have to re-query pending.
+    context.user_data["refleksi_k_id"] = pending["kebajikan_id"]
+    context.user_data["refleksi_sesi"] = pending["sesi"]
+    if step == "positif":
+        return await terima_refleksi_positif(update, context)
+    elif step == "negatif":
+        return await terima_refleksi_negatif(update, context)
+    elif step == "rencana":
+        return await terima_refleksi_rencana(update, context)
+    return ConversationHandler.END
+
+
 async def terima_refleksi_positif(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = await _lang(user_id, context)
-    # Prefer context.user_data (set by pilih_slot_mahir_cb / pilih_sesi_refleksi_cb)
-    # so the scheduler's set_pending for the *next* slot can't clobber an active session.
+    # Prefer context.user_data (set by pilih_slot_mahir_cb / pilih_sesi_refleksi_cb /
+    # text_when_pending_cb) so the scheduler's set_pending for the *next* slot can't
+    # clobber an active session.
     k_id = context.user_data.get("refleksi_k_id")
     sesi = context.user_data.get("refleksi_sesi")
     if not k_id or not sesi:
@@ -1149,6 +1174,11 @@ async def terima_refleksi_positif(update: Update, context: ContextTypes.DEFAULT_
             return ConversationHandler.END
         k_id = pending["kebajikan_id"]
         sesi = pending["sesi"]
+    # Store in context.user_data + temp cache so Q2/Q3 don't depend on the DB pending row
+    # (which the scheduler may overwrite for the *next* slot between Q1 and Q2).
+    context.user_data["refleksi_k_id"] = k_id
+    context.user_data["refleksi_sesi"] = sesi
+    context.user_data["refleksi_temp_positif"] = update.message.text
     await set_pending(user_id, sesi, k_id, step="negatif", temp_positif=update.message.text)
     await update.message.reply_text(
         format_pertanyaan_refleksi(sesi, k_id, "negatif", lang), parse_mode="Markdown"
@@ -1159,7 +1189,7 @@ async def terima_refleksi_positif(update: Update, context: ContextTypes.DEFAULT_
 async def terima_refleksi_negatif(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = await _lang(user_id, context)
-    # Same: prefer context.user_data to avoid cross-slot contamination.
+    # Prefer context.user_data to avoid cross-slot contamination.
     k_id = context.user_data.get("refleksi_k_id")
     sesi = context.user_data.get("refleksi_sesi")
     pending = await get_pending(user_id)
@@ -1168,8 +1198,13 @@ async def terima_refleksi_negatif(update: Update, context: ContextTypes.DEFAULT_
     if not k_id or not sesi:
         k_id = pending["kebajikan_id"]
         sesi = pending["sesi"]
+    # Read temp_positif from context.user_data first — prevents corruption if the scheduler
+    # wrote a new pending row (for the next slot) between Q1 and Q2.
+    temp_positif = (context.user_data.get("refleksi_temp_positif")
+                    or pending.get("temp_positif", ""))
+    context.user_data["refleksi_temp_negatif"] = update.message.text
     await set_pending(user_id, sesi, k_id, step="rencana",
-                      temp_positif=pending.get("temp_positif", ""),
+                      temp_positif=temp_positif,
                       temp_negatif=update.message.text)
     await update.message.reply_text(
         format_pertanyaan_refleksi(sesi, k_id, "rencana", lang), parse_mode="Markdown"
@@ -1183,13 +1218,23 @@ async def terima_refleksi_rencana(update: Update, context: ContextTypes.DEFAULT_
     pending = await get_pending(user_id)
     if not pending:
         return ConversationHandler.END
-    positif = pending.get("temp_positif", "")
-    negatif = pending.get("temp_negatif", "")
+    # Prefer context.user_data for temp values — prevents corruption from scheduler
+    # overwriting the pending row with the next slot between Q1 and Q3.
+    positif = (context.user_data.get("refleksi_temp_positif")
+               or pending.get("temp_positif", ""))
+    negatif = (context.user_data.get("refleksi_temp_negatif")
+               or pending.get("temp_negatif", ""))
     rencana = update.message.text
     # Prefer context.user_data for k_id/sesi consistency with Q1/Q2.
     k_id = context.user_data.pop("refleksi_k_id", None) or pending["kebajikan_id"]
     sesi = context.user_data.pop("refleksi_sesi", None) or pending["sesi"]
-    await save_catatan(user_id, sesi, k_id, positif, negatif, rencana)
+    # Clean up temp caches
+    context.user_data.pop("refleksi_temp_positif", None)
+    context.user_data.pop("refleksi_temp_negatif", None)
+    # Use user's timezone so the date is correct for non-WIB users.
+    db_user = await get_user(user_id)
+    user_tz = (db_user.get("timezone") or "Asia/Jakarta") if db_user else "Asia/Jakarta"
+    await save_catatan(user_id, sesi, k_id, positif, negatif, rencana, tz_str=user_tz)
     await clear_pending(user_id)
     await update.message.reply_text(
         format_konfirmasi_sesi(positif, negatif, rencana, k_id, lang), parse_mode="Markdown"
@@ -1926,6 +1971,9 @@ def build_conversation_handler():
             CallbackQueryHandler(reflect_vow_from_scheduler_cb, pattern="^reflect_vow_"),
             CallbackQueryHandler(pengingat_jawab_cb,            pattern="^pr_"),
             CallbackQueryHandler(rewrite_vow_cb, pattern="^rewrite_vow_"),
+            # Captures free-text replies to scheduler-sent reflection questions (mahir/pemula)
+            # when the user is not yet in a ConversationHandler state.
+            MessageHandler(filters.TEXT & ~filters.COMMAND, text_when_pending_cb),
             CommandHandler("ganti",    cmd_ganti),
             CommandHandler("change",   cmd_ganti),
             CommandHandler("tambahan", cmd_tambahan),

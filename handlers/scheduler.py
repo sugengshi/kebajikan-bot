@@ -491,7 +491,9 @@ async def kirim_sesi(bot: Bot, user_id: int, sesi: str):
 
 async def kirim_sesi_mahir(bot: Bot, user_id: int, slot_idx: int):
     """Send refleksi ke-N for mahir users — each slot maps to one of today's 6 virtues.
-    Does NOT call set_pending to avoid overwriting an active /refleksi conversation.
+    Calls set_pending so that the user's typed reply is captured by the text entry_point
+    in the ConversationHandler (text_when_pending_cb).  Downstream Q2/Q3 handlers prefer
+    context.user_data over pending, so an active /refleksi-started flow is not affected.
     """
     db_user = await get_user(user_id)
     if not db_user:
@@ -507,6 +509,8 @@ async def kirim_sesi_mahir(bot: Bot, user_id: int, slot_idx: int):
         text=format_pertanyaan_refleksi(sesi, k_id, "positif", lang),
         parse_mode="Markdown"
     )
+    # Set pending AFTER sending the message so the user's reply can be routed.
+    await set_pending(user_id, sesi, k_id)
 
 
 async def kirim_malam(bot: Bot, user_id: int):
