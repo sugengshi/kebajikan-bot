@@ -476,7 +476,11 @@ async def cmd_refleksi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if level == "mahir":
         return await _tampilkan_pilihan_refleksi_mahir(update.message, context, lang, db_user)
 
-    # ── Standard levels: show kebajikan ──
+    # ── Menengah: show 3 session slots, each pre-assigned to one virtue ──
+    if level == "menengah":
+        return await _tampilkan_pilihan_refleksi_menengah(update.message, context, lang, db_user)
+
+    # ── Standard levels (pemula): show kebajikan ──
     fokus = db_user.get("kebajikan_fokus", [])
     if not fokus:
         await update.message.reply_text(T("kebajikan_belum_ada", lang))
@@ -1045,6 +1049,76 @@ async def pilih_slot_mahir_cb(update: Update, context: ContextTypes.DEFAULT_TYPE
     await set_pending(user_id, sesi, k_id)
     context.user_data["refleksi_k_id"] = k_id
     context.user_data["refleksi_sesi"]  = sesi
+    await query.edit_message_reply_markup(reply_markup=None)
+    await query.message.reply_text(
+        format_pertanyaan_refleksi(sesi, k_id, "positif", lang),
+        parse_mode="Markdown"
+    )
+    return REFLEKSI_POSITIF
+
+
+async def _tampilkan_pilihan_refleksi_menengah(message, context, lang: str, db_user: dict):
+    """Menengah /refleksi: show 3 session slots with their pre-assigned virtue.
+
+    Design: pagi → fokus[0], siang → fokus[1], sore → fokus[2].
+    One entry per session per day — not one per virtue-session combo.
+    """
+    user_id = message.chat.id
+    fokus = db_user.get("kebajikan_fokus", [])
+    if not fokus or len(fokus) < 3:
+        await message.reply_text(T("kebajikan_belum_ada", lang))
+        return ConversationHandler.END
+
+    user_tz = db_user.get("timezone") or "Asia/Jakarta"
+    catatan = await get_catatan_hari_ini(user_id, tz_str=user_tz)
+    filled_sesi = {c["sesi"] for c in catatan}
+
+    sesi_config = [
+        ("pagi",  db_user.get("jam_pagi",  "07:00"), T("sesi_pagi_short",  lang)),
+        ("siang", db_user.get("jam_siang", "12:00"), T("sesi_siang_short", lang)),
+        ("sore",  db_user.get("jam_sore",  "18:00"), T("sesi_sore_short",  lang)),
+    ]
+    rows = []
+    for i, (sesi, jam, label) in enumerate(sesi_config):
+        k_id = fokus[i]
+        k = KEBAJIKAN.get(k_id, {})
+        is_filled = sesi in filled_sesi
+        status = "✅" if is_filled else "○"
+        rows.append([InlineKeyboardButton(
+            f"{status} {label} ({jam}) — {k.get('emoji', '')}{k.get('nama', '?')}",
+            callback_data=f"refleksi_men_{i}"
+        )])
+
+    await message.reply_text(
+        T("refleksi_pilih_slot_mahir", lang),
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(rows)
+    )
+    return PILIH_REFLEKSI
+
+
+async def pilih_sesi_menengah_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User chose a menengah session slot — start reflection for its assigned virtue."""
+    query = update.callback_query
+    await query.answer()
+    lang = await _lang(query.from_user.id, context)
+    user_id = query.from_user.id
+    slot_idx = int(query.data.replace("refleksi_men_", ""))
+
+    db_user = await get_user(user_id)
+    if not db_user:
+        return ConversationHandler.END
+    fokus = db_user.get("kebajikan_fokus", [])
+    if not fokus or len(fokus) < 3:
+        return ConversationHandler.END
+
+    sesi_list = ["pagi", "siang", "sore"]
+    sesi = sesi_list[slot_idx]
+    k_id = fokus[slot_idx]
+
+    await set_pending(user_id, sesi, k_id)
+    context.user_data["refleksi_k_id"] = k_id
+    context.user_data["refleksi_sesi"] = sesi
     await query.edit_message_reply_markup(reply_markup=None)
     await query.message.reply_text(
         format_pertanyaan_refleksi(sesi, k_id, "positif", lang),
@@ -2054,6 +2128,7 @@ def build_conversation_handler():
             PILIH_REFLEKSI: [
                 CallbackQueryHandler(pilih_kebajikan_refleksi_cb, pattern="^refleksi_k_"),
                 CallbackQueryHandler(pilih_slot_mahir_cb,         pattern="^refleksi_mahir_"),
+                CallbackQueryHandler(pilih_sesi_menengah_cb,      pattern="^refleksi_men_"),
                 CallbackQueryHandler(pilih_sumpah_slot_cb,        pattern="^sumpah_slot_"),
                 CallbackQueryHandler(sumpah_urutan_cb,            pattern="^sumpah_order_"),
             ],

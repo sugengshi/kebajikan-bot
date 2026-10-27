@@ -456,9 +456,19 @@ async def _kirim_06(bot: Bot, user_id: int):
     if not fokus:
         return
 
+    text = format_pagi_ganti_tanya(fokus, lang)
+    # For menengah, remind them they can swap their 3 virtues anytime via /ganti.
+    if level == "menengah":
+        tip = (
+            "💡 Ingin mengganti 3 kebajikan Anda? Ketik /ganti kapan saja."
+            if lang == "id" else
+            "💡 Want to swap your 3 virtues? Type /change anytime."
+        )
+        text += f"\n\n{tip}"
+
     await bot.send_message(
         chat_id=user_id,
-        text=format_pagi_ganti_tanya(fokus, lang),
+        text=text,
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([
             [
