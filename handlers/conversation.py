@@ -557,6 +557,7 @@ async def reflect_vow_from_scheduler_cb(update: Update, context: ContextTypes.DE
     context.user_data["sumpah_level"]        = level
     context.user_data["sumpah_pair_next"]    = p["pair_next"]
     context.user_data["sumpah_was_pair"]     = p["pair_next"] is not None
+    context.user_data["sumpah_user_tz"]      = db_user.get("timezone") or "Asia/Jakarta"
 
     kb = InlineKeyboardMarkup([[
         InlineKeyboardButton(T("sumpah_order_pos_label", lang), callback_data="sumpah_order_pos_first"),
@@ -902,7 +903,7 @@ async def terima_sumpah_positif(update: Update, context: ContextTypes.DEFAULT_TY
             return PILIH_REFLEKSI
         await update.message.reply_text(
             T("sumpah_refleksi_konfirmasi", lang, vow=vow, nums_str=nums_str,
-              positif=positif, negatif=negatif, rencana=rencana),
+              positif=_esc_md(positif), negatif=_esc_md(negatif), rencana=_esc_md(rencana)),
             parse_mode="Markdown"
         )
         for key in ["sumpah_positif","sumpah_negatif","sumpah_rencana","sumpah_vow_num",
@@ -973,7 +974,7 @@ async def terima_sumpah_rencana(update: Update, context: ContextTypes.DEFAULT_TY
         return PILIH_REFLEKSI
     await update.message.reply_text(
         T("sumpah_refleksi_konfirmasi", lang, vow=vow, nums_str=nums_str,
-          positif=positif, negatif=negatif, rencana=rencana),
+          positif=_esc_md(positif), negatif=_esc_md(negatif), rencana=_esc_md(rencana)),
         parse_mode="Markdown"
     )
     for key in ["sumpah_positif","sumpah_negatif","sumpah_rencana","sumpah_vow_num",
