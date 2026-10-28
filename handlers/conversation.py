@@ -2046,6 +2046,10 @@ def build_conversation_handler():
             CallbackQueryHandler(reflect_vow_from_scheduler_cb, pattern="^reflect_vow_"),
             CallbackQueryHandler(pengingat_jawab_cb,            pattern="^pr_"),
             CallbackQueryHandler(rewrite_vow_cb, pattern="^rewrite_vow_"),
+            # Captures free-text replies to scheduler-sent questions (mahir/pemula)
+            # when the user has NO active conversation state.
+            # With allow_reentry=False this only fires when state is None.
+            MessageHandler(filters.TEXT & ~filters.COMMAND, text_when_pending_cb),
             CommandHandler("ganti",    cmd_ganti),
             CommandHandler("change",   cmd_ganti),
             CommandHandler("tambahan", cmd_tambahan),
@@ -2143,8 +2147,18 @@ def build_conversation_handler():
                 MessageHandler(filters.TEXT & ~filters.COMMAND, terima_sumpah_rencana),
             ],
         },
-        fallbacks=[CommandHandler("start", start)],
-        allow_reentry=True,
+        fallbacks=[
+            # Users can always escape a stuck conversation with these commands.
+            CommandHandler("start",    start),
+            CommandHandler("refleksi", cmd_refleksi),
+            CommandHandler("reflect",  cmd_refleksi),
+            CommandHandler("ganti",    cmd_ganti),
+            CommandHandler("change",   cmd_ganti),
+        ],
+        # allow_reentry=False so entry_points only fire when NO conversation is active.
+        # This prevents the generic text entry_point (text_when_pending_cb) from
+        # intercepting messages while a user is mid-conversation (e.g. sumpah Q1→Q2).
+        allow_reentry=False,
         per_message=False,
         per_chat=True,
     )

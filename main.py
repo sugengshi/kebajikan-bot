@@ -11,7 +11,6 @@ from handlers.conversation import (
     build_conversation_handler, cmd_kebajikan, cmd_help,
     cmd_laporan, cmd_level, cmd_language,
     callback_pagi_ganti, cmd_setjam, cmd_setvowtime, laporan_mode_cb, rewrite_vow_cb,
-    text_when_pending_cb,
 )
 from handlers.scheduler import init_scheduler
 from handlers.admin import cmd_admin_users, cmd_admin_user, cmd_admin_entries, admin_entries_cb
@@ -159,14 +158,6 @@ def main():
     app.add_handler(CommandHandler("adminuser",    cmd_admin_user))
     app.add_handler(CommandHandler("adminentries", cmd_admin_entries))
     app.add_handler(CallbackQueryHandler(admin_entries_cb, pattern="^admin_entries_"))
-
-    # group=1: only fires when the ConversationHandler (group=0) did NOT handle the update.
-    # Captures free-text replies to scheduler-sent reflection questions (mahir/pemula)
-    # when the user has no active conversation state.
-    app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, text_when_pending_cb),
-        group=1,
-    )
 
     app.add_error_handler(error_handler)
 
