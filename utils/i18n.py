@@ -767,7 +767,7 @@ STRINGS = {
         "id": (
             "✅ *Konfirmasi Mulai Sumpah*\n\n"
             "Level: *{label}*\n"
-            "Mulai dari sumpah: *#{vow_num}* (Hari ke-{day_number})\n\n"
+            "Mulai dari sumpah: *#{vow_num}*\n\n"
             "─────────────────────\n"
             "*Jadwal sumpah hari ini:*\n"
             "{jadwal}\n"
@@ -777,7 +777,7 @@ STRINGS = {
         "en": (
             "✅ *Vow Start Confirmation*\n\n"
             "Level: *{label}*\n"
-            "Starting from vow: *#{vow_num}* (Day {day_number})\n\n"
+            "Starting from vow: *#{vow_num}*\n\n"
             "─────────────────────\n"
             "*Today's vow schedule:*\n"
             "{jadwal}\n"
