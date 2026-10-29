@@ -2148,12 +2148,22 @@ def build_conversation_handler():
             ],
         },
         fallbacks=[
-            # Users can always escape a stuck conversation with these commands.
-            CommandHandler("start",    start),
-            CommandHandler("refleksi", cmd_refleksi),
-            CommandHandler("reflect",  cmd_refleksi),
-            CommandHandler("ganti",    cmd_ganti),
-            CommandHandler("change",   cmd_ganti),
+            # Any of these commands work regardless of current conversation state.
+            CommandHandler("start",         start),
+            CommandHandler("refleksi",      cmd_refleksi),
+            CommandHandler("reflect",       cmd_refleksi),
+            CommandHandler("ganti",         cmd_ganti),
+            CommandHandler("change",        cmd_ganti),
+            CommandHandler("tambahan",      cmd_tambahan),
+            CommandHandler("add",           cmd_tambahan),
+            CommandHandler("level",         cmd_level),
+            CommandHandler("language",      cmd_language),
+            CommandHandler("setjam",        cmd_setjam),
+            CommandHandler("settime",       cmd_setjam),
+            CommandHandler("setvowtime",    cmd_setvowtime),
+            CommandHandler("setjamsumpah",  cmd_setvowtime),
+            CommandHandler("settimezone",   cmd_settimezone),
+            CommandHandler("setzone",       cmd_settimezone),
         ],
         # allow_reentry=False so entry_points only fire when NO conversation is active.
         # This prevents the generic text entry_point (text_when_pending_cb) from
