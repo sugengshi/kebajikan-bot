@@ -2164,6 +2164,11 @@ def build_conversation_handler():
             CommandHandler("setjamsumpah",  cmd_setvowtime),
             CommandHandler("settimezone",   cmd_settimezone),
             CommandHandler("setzone",       cmd_settimezone),
+            # Scheduler "Tulis refleksi sumpah ini" button must work from any state.
+            # Without this, clicking the button while mid-conversation is silently ignored.
+            CallbackQueryHandler(reflect_vow_from_scheduler_cb, pattern="^reflect_vow_"),
+            CallbackQueryHandler(pengingat_jawab_cb,            pattern="^pr_"),
+            CallbackQueryHandler(rewrite_vow_cb,                pattern="^rewrite_vow_"),
         ],
         # allow_reentry=False so entry_points only fire when NO conversation is active.
         # This prevents the generic text entry_point (text_when_pending_cb) from
